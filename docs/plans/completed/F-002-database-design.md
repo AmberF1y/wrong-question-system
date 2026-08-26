@@ -60,21 +60,7 @@ F-002 数据库设计与数据层准备
 
 当前状态：
 
-Active
-
-F-002 核心开发工作已经完成。
-
-目前正在进行：
-
-文档同步
-↓
-最终测试
-↓
-Git 提交
-↓
-Feature 收尾
-
-F-002 正式结束后，再单独设计下一阶段 Feature。
+Completed
 
 ---
 
@@ -1387,28 +1373,21 @@ REST API
 
 # 42. 当前下一步
 
-当前首先完成：
+F-002 数据库设计与数据层准备已经完成。
 
-> F-002 收尾。
+当前剩余的是项目管理收尾：
 
-顺序：
+1. 将 F-002 Feature Plan 移动到 `plans/completed`
+2. 提交 F-002 收尾文档
+3. Push `feature/F-002-database-design` 分支
+4. 确认远程分支状态
+5. 单独规划下一阶段 Feature
 
-1. 更新 F-002 Feature Plan
-2. 更新 project-status.md
-3. 检查 git status
-4. 执行最终 Maven 测试
-5. Git add
-6. Git commit
-7. Git push
-8. F-002 标记 Completed
-9. 移动到 plans/completed
-10. 单独设计下一阶段 Feature
-
-下一阶段具体范围：
+下一阶段具体功能范围：
 
 尚未正式确定。
 
-不在 F-002 中提前加入新的业务功能。
+不在 F-002 中继续追加新的业务功能。
 
 ---
 
@@ -1416,40 +1395,41 @@ REST API
 
 截至 2026-08-27：
 
-F-001 项目初始化
+F-001 项目初始化  
 Completed
 
-F-002 数据库设计与数据层准备
-核心开发 Completed
-Feature 收尾 Active
+F-002 数据库设计与数据层准备  
+Completed
+
+当前没有正在开发的 Feature。
 
 当前项目已经具备：
 
-Spring Boot 基础工程
-+
-MySQL 数据库
-+
-Question 数据模型
-+
-KnowledgePoint 知识树模型
-+
-Question-KnowledgePoint 多对多关系
-+
-Spring Data JPA
-+
-Repository 数据访问层
-+
+Spring Boot 基础工程  
++  
+MySQL 数据库  
++  
+Question 数据模型  
++  
+KnowledgePoint 知识树模型  
++  
+Question-KnowledgePoint 多对多关系  
++  
+Spring Data JPA  
++  
+Repository 数据访问层  
++  
 真实 MySQL 集成测试
 
-最新自动化测试：
+F-002 最终自动化测试结果：
 
-Tests run: 4
-Failures: 0
-Errors: 0
+Tests run: 4  
+Failures: 0  
+Errors: 0  
 Skipped: 0
 
 BUILD SUCCESS
 
-当前下一动作：
+当前下一阶段：
 
-完成 F-002 文档与 Git 收尾
+规划新的 Feature。
