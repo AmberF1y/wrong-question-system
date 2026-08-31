@@ -1,220 +1,587 @@
-# F-003：知识点管理业务与 REST API
+# F-003 知识点管理业务层与 REST API
 
 ## 1. Feature 基本信息
 
-* Feature ID：F-003
-* Feature Name：Knowledge Point Management
-* 中文名称：知识点管理业务与 REST API
-* 状态：Planned
-* 前置 Feature：F-002 Database Design
-* 主要对象：`KnowledgePoint`
-* 目标：在 F-002 已完成数据库设计、Entity 和 Repository 基础准备的前提下，实现完整的知识点管理后端能力。
+| 项目 | 内容 |
+| --- | --- |
+| Feature ID | F-003 |
+| Feature 名称 | 知识点管理业务层与 REST API |
+| 状态 | Planned（范围已确认，尚未开始实现） |
+| 计划日期 | 2026-08-31 |
+| 目标分支 | `feature/F-003-knowledge-point-management` |
+| 前置 Feature | F-001、F-002 |
+| 目标目录 | `docs/plans/active/F-003-knowledge-point-management.md` |
 
 ---
 
-# 2. 背景
+## 2. 文档用途
 
-F-002 已完成知识点相关的数据层准备，包括：
+本文件是 F-003 的正式 Feature Plan，用于约束本阶段的目标、范围、业务规则、技术方案、测试范围和完成标准。
 
-* `knowledge_point` 数据表
-* `KnowledgePoint` Entity
-* `KnowledgePointRepository`
-* `Question` 与知识点之间的关联关系
-* 对应的 Repository 基础测试
+本文件只记录已经确认的内容。实现过程中如果发现必须修改的业务规则，应先讨论并更新本文件，再修改实现，避免代码、数据库与文档长期不一致。
 
-目前系统已经能够通过 JPA 与数据库中的知识点数据交互，但尚未形成完整的业务层和 REST API。
-
-外部调用方目前无法通过 HTTP API 完成：
-
-* 查询知识点
-* 新增知识点
-* 修改知识点
-* 调整知识点层级
-* 删除知识点
-
-因此，F-003 的主要任务是：
-
-> 在现有数据层基础上，为 KnowledgePoint 建立完整的 DTO → Controller → Service → Repository → Database 调用链，并实现知识点树相关业务规则。
+本 Feature Plan 不承担 `project-status.md` 的职责，不重复记录整个项目的发展历史。
 
 ---
 
-# 3. Feature 目标
+## 3. 规划依据
 
-F-003 完成后，后端应能够提供完整的知识点管理能力。
+F-003 基于以下当前项目文件和真实代码重新规划：
 
-包括：
+- `docs/PRODUCT.md`
+- `docs/database-design.md`
+- `docs/project-status.md`
+- `docs/decisions/ADR-001-initial-tech-stack-and-architecture.md`
+- `docs/plans/completed/F-002-database-design.md`
+- `pom.xml`
+- `application.yaml`
+- `Question.java`
+- `KnowledgePoint.java`
+- `QuestionRepository.java`
+- `KnowledgePointRepository.java`
+- `QuestionRepositoryTest.java`
+- `KnowledgePointRepositoryTest.java`
+- `HealthControllerTest.java`
 
-1. 查询完整知识点树
-2. 新增根知识点或子知识点
-3. 修改知识点名称
-4. 调整知识点的父节点
-5. 删除满足条件的知识点
-6. 防止产生非法的知识点树结构
-7. 对请求参数进行校验
-8. 对业务异常进行统一处理
-9. 返回明确且一致的 HTTP 状态码
-10. 为核心业务逻辑和 API 提供自动化测试
+本次规划不直接沿用此前聊天中关于 F-003 的结论。
 
-最终形成如下基本调用链：
+---
 
-用户 / 前端
+## 4. 当前项目基线
 
+F-001 和 F-002 已完成，当前已经具备：
+
+- Java 21。
+- Spring Boot 4.1.1。
+- Spring MVC。
+- Spring Data JPA。
+- Hibernate。
+- MySQL 9.6。
+- `Question` Entity。
+- `KnowledgePoint` Entity。
+- `QuestionRepository`。
+- `KnowledgePointRepository`。
+- Question 与 KnowledgePoint 的单向多对多映射。
+- KnowledgePoint 的父节点自关联。
+- `ddl-auto: validate` 数据库结构校验。
+- Repository 真实 MySQL 集成测试。
+
+当前尚未实现：
+
+- 知识点 Service。
+- 知识点业务 Controller。
+- 知识点 REST API。
+- API 请求与响应 DTO。
+- 请求参数 Validation。
+- 生产业务事务边界。
+- 统一异常响应。
+- 知识树查询接口。
+- 知识点新增、修改、移动和删除接口。
+
+---
+
+## 5. 已发现的现有文档问题
+
+这些问题不是 F-003 的业务目标，但需要在 F-003 文档工作中修正。
+
+### 5.1 ADR-001 与真实代码冲突
+
+ADR-001 仍记录：
+
+- MyBatis。
+- MyBatis-Plus。
+- Flyway。
+
+真实项目已经使用：
+
+- Spring Data JPA。
+- Hibernate。
+- `sql/init.sql` 管理当前数据库结构。
+- 尚未引入 Flyway。
+
+因此需要新增 ADR-002，明确替代 ADR-001 中的数据访问和数据库版本管理决定。ADR-001 保留作为历史记录，不直接覆盖原文。
+
+### 5.2 database-design.md 状态过期
+
+文档顶部及末尾仍包含“待编写 SQL、待创建 Entity、待创建 Repository”等已经完成的内容。
+
+时间字段由数据库还是 JPA 维护也已经确定，应更新为：
+
+- 数据库维护 `created_time` 和 `updated_time`。
+- Entity 通过 `insertable = false`、`updatable = false` 读取时间字段。
+
+### 5.3 project-status.md 存在收尾残留
+
+文档中存在重复标题、F-002 收尾步骤残留及已经过期的下一步描述，需要在 F-003 文档同步时清理。
+
+---
+
+## 6. Feature 目标
+
+F-003 的目标是打通知识点管理的第一条完整后端业务链路：
+
+```text
+HTTP 请求
 ↓
-
-HTTP Request
-
-↓
-
 Controller
-
 ↓
-
-DTO
-
+DTO + Validation
 ↓
-
-Service
-
+Service + Transaction
 ↓
-
 Repository
-
 ↓
-
+Entity
+↓
 MySQL
+```
 
-结果再通过相反方向返回给调用方。
+完成后，Java 后端应能够通过稳定的 REST API：
 
----
-
-# 4. Feature 范围
-
-## 4.1 本 Feature 实现
-
-F-003 实现以下内容：
-
-* KnowledgePoint REST API
-* KnowledgePoint DTO
-* KnowledgePoint Service
-* KnowledgePoint 业务规则校验
-* KnowledgePoint Repository 所需补充查询
-* QuestionRepository 中知识点引用检查能力
-* Bean Validation 参数校验
-* 业务异常
-* 全局异常处理
-* API 错误响应结构
-* Service 层测试
-* Controller / API 层测试
-* 项目文档同步更新
+- 查询完整知识树。
+- 新增根知识点或子知识点。
+- 修改知识点名称。
+- 在同一知识树内部调整层级。
+- 安全删除符合条件的知识点。
+- 对非法业务操作返回明确、稳定的错误响应。
 
 ---
 
-## 4.2 本 Feature 不实现
+## 7. 为什么 F-003 先做知识点管理
 
-以下内容不属于 F-003：
+错题创建要求至少关联一个知识点，因此错题管理 API 依赖一个可查询、可维护的知识体系。
 
-* Question 错题增删改查
-* ReviewRecord 复习记录管理
-* 滚动复习算法
-* 掌握率计算
-* OCR
-* 图片上传
-* 用户注册
-* 用户登录
-* 权限控制
-* 前端页面
-* 搜索功能
-* 知识点分页
-* 批量删除
-* 批量移动
-* 知识点拖拽前端交互
+当前合理依赖顺序为：
 
-这些功能将在后续 Feature 中独立处理。
+```text
+F-002 数据模型与 Repository
+↓
+F-003 知识点管理业务与 API
+↓
+后续错题管理业务与 API
+↓
+后续复习调度与复习记录
+```
+
+如果先做错题 API，知识点只能通过 Navicat 或测试代码手工准备，无法形成真实可用的录入流程。
+
+复习模块又依赖可正常创建和管理的错题，因此不应提前进入复习功能。
 
 ---
 
-# 5. 核心业务模型
+## 8. F-003 范围
 
-知识点采用树状结构。
+### 8.1 包含范围
+
+- 查询完整知识树。
+- 新增根知识点。
+- 新增子知识点。
+- 修改知识点名称。
+- 同一知识树内调整父节点。
+- 删除没有子节点且没有错题引用的知识点。
+- 根节点改名时同步相关错题的 `subject`。
+- 名称、父节点、循环引用和移动范围校验。
+- 请求 DTO 与响应 DTO。
+- Validation。
+- Service。
+- Transaction。
+- Controller。
+- REST API。
+- 统一 Exception Handler。
+- Service 单元测试。
+- Controller 真实 MySQL 集成测试。
+- ADR-002。
+- API、数据库设计和项目状态文档同步。
+
+### 8.2 不包含范围
+
+- 错题 CRUD API。
+- 错题分页与搜索。
+- 图片上传与访问。
+- OCR。
+- 复习记录。
+- 复习队列。
+- 复习算法。
+- 掌握程度。
+- Dashboard。
+- 前端页面。
+- Subject 独立数据表。
+- 知识点手工排序字段。
+- 知识树分页。
+- 跨知识树迁移。
+- 递归删除子树。
+- 自动解除错题关联。
+- H2。
+- Testcontainers。
+- Flyway。
+- MapStruct。
+- Service 接口与 `ServiceImpl` 双层结构。
+- 当前没有真实需求的缓存、消息队列或分布式组件。
+
+---
+
+## 9. 本 Feature 中各层的职责
+
+### 9.1 REST
+
+REST 是本 Feature 对外提供 HTTP 接口的组织方式。
+
+知识点作为资源，通过 HTTP 方法表达操作：
+
+- `GET`：查询。
+- `POST`：创建。
+- `PUT`：修改。
+- `DELETE`：删除。
+
+REST 不是一个新的代码层，而是 Controller 对外接口的设计方式。
+
+### 9.2 Controller
+
+Controller 位于 HTTP 请求入口，负责：
+
+- 接收路径参数和 JSON 请求体。
+- 触发 Validation。
+- 调用 Service。
+- 返回响应 DTO 和 HTTP 状态码。
+
+Controller 不负责：
+
+- 查询或保存 Entity。
+- 判断知识树是否形成环。
+- 判断是否跨知识树移动。
+- 判断是否允许删除。
+- 直接调用 Repository。
+
+### 9.3 DTO
+
+DTO 是 API 专用的数据载体，负责在前端与后端之间传递数据。
+
+F-003 不直接把 Entity 作为请求体或响应体，原因包括：
+
+- Entity 服务于 JPA 与数据库映射，不等于 API 合同。
+- `KnowledgePoint.parent` 是对象关系，直接序列化容易引起懒加载或递归问题。
+- API 字段未来可以独立演进，不必强迫 Entity 同步变化。
+
+DTO 使用 Java `record` 实现，保持数据结构简洁、不可变。
+
+### 9.4 Validation
+
+Validation 负责通用输入格式校验：
+
+- 名称不能为空。
+- 输入名称不能超过 100 个字符。
+- 请求体必须是合法 JSON。
+
+Validation 不负责依赖数据库或当前业务状态的判断。
+
+### 9.5 Service
+
+Service 位于 Controller 和 Repository 之间，负责知识点业务规则：
+
+- 名称清理。
+- 根节点与普通节点长度区别。
+- 重名检查。
+- 父节点存在检查。
+- 自引用检查。
+- 循环引用检查。
+- 同树移动检查。
+- 删除安全检查。
+- 根节点改名后的错题 `subject` 同步。
+- Entity 与 DTO 转换。
+- 知识树组装。
+
+F-003 只创建一个具体的 `KnowledgePointService` 类，不创建没有第二种实现的接口和 `Impl` 类。
+
+### 9.6 Transaction
+
+Transaction 保证一次业务操作中的多个数据库动作具有原子性。
+
+尤其是根节点改名：
+
+```text
+修改根节点名称
++
+更新相关 Question.subject
+```
+
+两部分必须全部成功或全部回滚，不能只完成其中一部分。
+
+写操作在 Service 上使用 `@Transactional`，知识树查询使用 `@Transactional(readOnly = true)`。
+
+### 9.7 Repository
+
+Repository 负责数据访问，不负责决定业务规则。
+
+Service 通过 Repository：
+
+- 查询知识点。
+- 检查重名。
+- 检查子节点。
+- 检查错题引用。
+- 查询需要同步 `subject` 的错题。
+- 保存或删除数据。
+
+### 9.8 Entity 与 MySQL
+
+Entity 继续映射 F-002 已建立的数据库表：
+
+- `knowledge_point`。
+- `question`。
+- `question_knowledge_point`。
+
+F-003 不修改数据库表结构。
+
+### 9.9 Exception Handler
+
+Exception Handler 统一把 Java 异常转换成可预测的 HTTP 状态码和 JSON 错误结构。
+
+它避免：
+
+- 把数据库异常堆栈直接返回给调用方。
+- 不同 Controller 各自拼装不同错误格式。
+- 前端依赖不稳定的异常文本。
+
+---
+
+## 10. 已确认的业务规则
+
+### 10.1 名称清理
+
+- 创建和修改时均去除名称首尾空格。
+- 去除首尾空格后不能为空。
+- 不自动删除或合并名称内部空格。
 
 例如：
 
-408
-
-├── 数据结构
-
-│   ├── 树
-
-│   │   ├── 二叉树
-
-│   │   └── AVL 树
-
-│   └── 图
-
-│       ├── 最短路径
-
-│       └── 拓扑排序
-
-└── 计算机组成原理
-
-```
-├── Cache
-
-└── 虚拟存储器
+```text
+"  TCP  "
 ```
 
-数据库中并不直接存储一棵树，而是通过每条知识点记录中的父节点关系表示。
+保存为：
+
+```text
+"TCP"
+```
+
+但：
+
+```text
+"操作 系统"
+```
+
+内部空格保持不变。
+
+### 10.2 名称长度
+
+- 根节点名称最多 50 个字符。
+- 普通知识点名称最多 100 个字符。
+- DTO Validation 统一限制输入不超过 100 个字符。
+- Service 在创建或修改根节点时额外执行 50 字符业务限制。
+
+根节点限制为 50 的原因是：
+
+```text
+knowledge_point.name  VARCHAR(100)
+question.subject      VARCHAR(50)
+```
+
+根节点名称同时承担科目名称作用，必须能够安全同步到 `question.subject`。
+
+### 10.3 名称唯一性
+
+- 同一个父节点下面不能存在两个同名知识点。
+- 所有根节点视为同一组，根节点之间不能重名。
+- 不同父节点下面允许同名知识点。
+- 创建和改名使用相同的重名规则。
+- 根据当前 `utf8mb4_unicode_ci` 排序规则，英文大小写不作为不同名称。
+
+因此同级的 `TCP` 和 `tcp` 被视为重名。
+
+### 10.4 创建根节点
+
+请求中：
+
+```json
+{
+  "name": "408",
+  "parentId": null
+}
+```
+
+表示创建根节点。
+
+根节点名称必须满足：
+
+- 非空。
+- 最多 50 个字符。
+- 不与现有根节点重名。
+
+### 10.5 创建子节点
+
+请求中：
+
+```json
+{
+  "name": "TCP",
+  "parentId": 3
+}
+```
+
+表示在 ID 为 3 的父节点下创建子节点。
+
+父节点必须真实存在。
+
+### 10.6 节点的知识树归属
+
+根节点代表一棵知识树，同时代表科目边界。
+
+节点创建后，其所属根节点不可通过移动操作改变。
+
+### 10.7 同一知识树内移动
+
+普通节点允许在同一根节点下调整父节点。
+
+移动前必须验证：
+
+- 目标节点存在。
+- 新父节点存在。
+- 新父节点不是目标节点自身。
+- 新父节点不是目标节点的后代。
+- 移动后根节点不发生变化。
+- 新父节点下不存在同名节点。
+
+### 10.8 禁止跨根节点移动
+
+不允许把一个节点或子树从一个根节点移动到另一个根节点。
+
+例如不允许：
+
+```text
+408 → TCP
+```
+
+移动到：
+
+```text
+数学 → TCP
+```
+
+F-003 不实现自动迁移错题或自动调整 `subject`。
+
+### 10.9 根节点移动限制
+
+- 根节点不能变成任何其他节点的子节点。
+- 普通节点不能通过把 `parentId` 修改为 `null` 升级为新根节点。
+- 根节点只允许改名或在满足删除条件时删除。
+
+### 10.10 自引用与循环引用
+
+不允许节点把自己设为父节点。
+
+不允许把节点移动到自己的任何后代下面。
 
 例如：
 
-| id | name | parent_id |
-| -- | ---- | --------- |
-| 1  | 408  | null      |
-| 2  | 数据结构 | 1         |
-| 3  | 树    | 2         |
-| 4  | 二叉树  | 3         |
+```text
+TCP
+└── 拥塞控制
+```
 
-Service 层负责根据这些记录组装树结构。
+不允许再把 `TCP` 移动到 `拥塞控制` 下面。
+
+### 10.11 根节点改名
+
+允许根节点改名。
+
+根节点改名时，Service 必须在同一个事务中：
+
+1. 校验新名称。
+2. 校验根节点重名。
+3. 查询 `subject` 等于旧根节点名称的 Question。
+4. 将这些 Question 的 `subject` 修改为新根节点名称。
+5. 修改根节点名称。
+6. 提交事务。
+
+任意一步失败时，整个操作回滚。
+
+### 10.12 严格删除
+
+只有同时满足以下条件的知识点才允许删除：
+
+- 没有子节点。
+- 没有任何错题引用。
+
+删除规则：
+
+- 不递归删除子树。
+- 不自动解除错题关联。
+- 没有子节点且没有错题引用的根节点允许删除。
+- 知识点不存在时返回 404。
+- 存在子节点或错题引用时返回 409。
+
+数据库的 `ON DELETE RESTRICT` 继续作为第二层数据完整性保护。
+
+### 10.13 知识树查询
+
+- 一次返回完整知识树。
+- 不分页。
+- 最外层返回所有根节点。
+- 每个节点返回嵌套的 `children`。
+- 叶子节点返回 `children: []`，不返回 `null`。
+- 根节点和同级子节点统一按照 `id` 升序排列。
+- 改名不改变显示顺序。
 
 ---
 
-# 6. REST API 设计
+## 11. REST API 设计
 
-F-003 提供以下 5 个核心 API。
+### 11.1 接口总览
 
----
+| 功能 | 方法 | 路径 | 成功状态 |
+| --- | --- | --- | --- |
+| 查询完整知识树 | GET | `/api/knowledge-points/tree` | 200 |
+| 新增知识点 | POST | `/api/knowledge-points` | 201 |
+| 修改名称或父节点 | PUT | `/api/knowledge-points/{id}` | 200 |
+| 删除知识点 | DELETE | `/api/knowledge-points/{id}` | 200 |
 
-## 6.1 查询知识点树
+F-003 不提供单独的：
 
-### Request
+```http
+GET /api/knowledge-points/{id}
+```
 
-`GET /api/knowledge-points/tree`
+原因是完整知识树已经包含当前编辑场景需要的 `id`、`name`、`parentId` 和层级关系。
 
-### 功能
+### 11.2 查询完整知识树
 
-查询数据库中的所有知识点，并按照父子关系组装为完整知识点树。
+请求：
 
-### 成功响应
+```http
+GET /api/knowledge-points/tree
+```
 
-HTTP：
+成功响应：
 
-`200 OK`
-
-响应示例：
+```http
+200 OK
+```
 
 ```json
 [
   {
     "id": 1,
-    "name": "数据结构",
+    "name": "408",
+    "parentId": null,
     "children": [
       {
         "id": 2,
-        "name": "树",
+        "name": "计算机网络",
+        "parentId": 1,
         "children": [
           {
             "id": 3,
-            "name": "二叉树",
+            "name": "TCP",
+            "parentId": 2,
             "children": []
           }
         ]
@@ -224,1640 +591,877 @@ HTTP：
 ]
 ```
 
-### 空数据情况
-
-如果数据库中不存在任何知识点：
-
-```json
-[]
-```
-
-仍返回：
-
-`200 OK`
-
----
-
-# 7. 新增知识点
-
-## 7.1 Request
-
-`POST /api/knowledge-points`
-
-请求体：
-
-```json
-{
-  "name": "二叉树",
-  "parentId": 8
-}
-```
-
-### 字段
-
-`name`
-
-知识点名称。
-
-`parentId`
-
-父知识点 ID。
-
-如果：
-
-```json
-{
-  "name": "数据结构",
-  "parentId": null
-}
-```
-
-表示创建根知识点。
-
----
-
-## 7.2 成功响应
-
-HTTP：
-
-`201 Created`
-
-Body：
-
-```json
-{
-  "id": 15,
-  "name": "二叉树",
-  "parentId": 8
-}
-```
-
----
-
-## 7.3 业务规则
-
-新增知识点必须满足：
-
-1. `name` 合法
-2. `parentId != null` 时，父知识点必须存在
-3. 同一父节点下不能存在同名知识点
-4. 根节点之间不能存在同名知识点
-5. 校验通过后才允许保存
-
-例如：
-
-数据结构
-
-├── 树
-
-└── 树
-
-不允许。
-
-但是：
-
-数据结构
-
-└── 树
-
-操作系统
-
-└── 树
-
-允许。
-
-原因是两个“树”的父节点不同。
-
----
-
-# 8. 修改知识点名称
-
-## 8.1 Request
-
-`PATCH /api/knowledge-points/{id}/name`
-
-例如：
-
-`PATCH /api/knowledge-points/15/name`
-
-请求体：
-
-```json
-{
-  "name": "平衡二叉树"
-}
-```
-
----
-
-## 8.2 成功响应
-
-HTTP：
-
-`200 OK`
-
-Body：
-
-```json
-{
-  "id": 15,
-  "name": "平衡二叉树",
-  "parentId": 8
-}
-```
-
----
-
-## 8.3 业务规则
-
-修改名称时必须满足：
-
-1. 当前知识点必须存在
-2. 新名称必须合法
-3. 新名称不能与当前父节点下的其他知识点重名
-4. 如果当前节点是根节点，则不能与其他根节点重名
-
-如果：
-
-`二叉树 → 二叉树`
-
-即新名称与当前名称完全相同，则：
-
-* 不视为错误
-* 不返回重名冲突
-* 可以直接视为操作成功
-
-查重时必须排除当前知识点自身。
-
----
-
-# 9. 移动知识点
-
-## 9.1 Request
-
-`PATCH /api/knowledge-points/{id}/parent`
-
-例如：
-
-`PATCH /api/knowledge-points/20/parent`
-
-请求体：
-
-```json
-{
-  "parentId": 12
-}
-```
-
-表示：
-
-将 ID 为 20 的知识点移动到 ID 为 12 的知识点下面。
-
----
-
-## 9.2 移动为根节点
+### 11.3 新增知识点
 
 请求：
 
-```json
-{
-  "parentId": null
-}
+```http
+POST /api/knowledge-points
+Content-Type: application/json
 ```
 
-表示将该知识点移动为根节点。
-
----
-
-## 9.3 成功响应
-
-HTTP：
-
-`200 OK`
-
-Body：
+请求体：
 
 ```json
 {
-  "id": 20,
-  "name": "DFS",
-  "parentId": 12
+  "name": "TCP",
+  "parentId": 2
 }
 ```
 
----
+成功响应：
 
-## 9.4 业务规则
-
-移动知识点时必须检查：
-
-1. 当前知识点必须存在
-2. `parentId != null` 时，新父节点必须存在
-3. 不能把自己设置为自己的父节点
-4. 不能把当前知识点移动到自己的子孙节点下面
-5. 移动后不能与新位置的兄弟节点重名
-6. 移动为根节点后不能与其他根节点重名
-
----
-
-## 9.5 防止形成环
-
-例如当前结构：
-
-数据结构
-
-└── 树
-
-```
-└── 二叉树
-```
-
-不允许把：
-
-`数据结构`
-
-移动到：
-
-`二叉树`
-
-下面。
-
-否则会形成：
-
-数据结构
-
-↓
-
-树
-
-↓
-
-二叉树
-
-↓
-
-数据结构
-
-形成循环结构。
-
-因此移动前必须执行环检测。
-
----
-
-## 9.6 环检测基本思路
-
-假设：
-
-* 当前需要移动的节点为 A
-* 新父节点为 B
-
-从 B 开始不断向父节点方向查找：
-
-B
-
-↓
-
-B.parent
-
-↓
-
-B.parent.parent
-
-↓
-
-……
-
-如果过程中遇到 A：
-
-说明 B 本身就是 A 的后代。
-
-此时：
-
-A → B
-
-的移动必须被拒绝。
-
-如果最终到达根节点，并始终没有遇到 A：
-
-则不存在这种循环关系。
-
-具体实现必须依据当前 `KnowledgePoint` Entity 的父节点映射方式确定。
-
----
-
-## 9.7 原地移动
-
-如果：
-
-当前：
-
-`parentId = 10`
-
-请求仍然为：
-
-`parentId = 10`
-
-则：
-
-* 不视为错误
-* 可以直接视为成功
-* 不需要产生业务冲突
-
----
-
-# 10. 删除知识点
-
-## 10.1 Request
-
-`DELETE /api/knowledge-points/{id}`
-
-例如：
-
-`DELETE /api/knowledge-points/15`
-
----
-
-## 10.2 成功响应
-
-HTTP：
-
-`204 No Content`
-
-不返回 JSON Body。
-
-`204` 本身即表示：
-
-> 删除操作已经成功完成，并且没有需要返回的响应正文。
-
----
-
-## 10.3 删除规则
-
-删除前必须检查：
-
-1. 当前知识点必须存在
-2. 当前知识点不能存在子知识点
-3. 当前知识点不能被任何 Question 引用
-
-只有全部满足时才能删除。
-
----
-
-## 10.4 存在子节点
-
-例如：
-
-树
-
-└── 二叉树
-
-不能直接删除：
-
-`树`
-
-必须先处理其子节点。
-
-F-003 不提供级联删除知识点树功能。
-
----
-
-## 10.5 被 Question 引用
-
-如果存在：
-
-Question
-
-↓
-
-KnowledgePoint：二叉树
-
-则不能删除：
-
-`二叉树`
-
-避免 Question 对应的知识点关系失效。
-
----
-
-# 11. DTO 设计
-
-F-003 暂定建立以下 DTO。
-
----
-
-## 11.1 CreateKnowledgePointRequest
-
-用途：
-
-新增知识点请求。
-
-字段：
-
-* `name`
-* `parentId`
-
-示例：
-
-```json
-{
-  "name": "二叉树",
-  "parentId": 8
-}
-```
-
----
-
-## 11.2 UpdateKnowledgePointNameRequest
-
-用途：
-
-修改知识点名称。
-
-字段：
-
-* `name`
-
-示例：
-
-```json
-{
-  "name": "平衡二叉树"
-}
-```
-
----
-
-## 11.3 MoveKnowledgePointRequest
-
-用途：
-
-修改知识点父节点。
-
-字段：
-
-* `parentId`
-
-示例：
-
-```json
-{
-  "parentId": 12
-}
-```
-
-`parentId = null` 表示移动为根节点。
-
----
-
-## 11.4 KnowledgePointResponse
-
-用途：
-
-新增、改名、移动成功后的响应。
-
-字段暂定：
-
-* `id`
-* `name`
-* `parentId`
-
-示例：
-
-```json
-{
-  "id": 15,
-  "name": "二叉树",
-  "parentId": 8
-}
-```
-
----
-
-## 11.5 KnowledgePointTreeResponse
-
-用途：
-
-知识点树查询响应。
-
-字段：
-
-* `id`
-* `name`
-* `children`
-
-其中：
-
-`children`
-
-本身是：
-
-`KnowledgePointTreeResponse`
-
-集合。
-
-因此可以形成递归树结构。
-
----
-
-## 11.6 ErrorResponse
-
-用途：
-
-统一错误响应。
-
-字段暂定：
-
-* `status`
-* `message`
-
-示例：
-
-```json
-{
-  "status": 409,
-  "message": "同一父节点下已存在同名知识点"
-}
-```
-
-F-003 暂时不引入以下字段：
-
-* timestamp
-* path
-* errorCode
-* traceId
-* details
-
-如后续项目复杂度增加，再独立扩展。
-
----
-
-# 12. Entity 与 DTO 边界
-
-F-003 不直接将 `KnowledgePoint` Entity 暴露为 API 请求或响应模型。
-
-原则：
-
-Entity：
-
-> 用于 Java 与数据库之间的数据映射。
-
-DTO：
-
-> 用于 Controller 与外部调用方之间的数据传输。
-
-例如新增知识点只需要：
-
-* name
-* parentId
-
-而 Entity 可能还包含：
-
-* id
-* parent
-* createdAt
-* updatedAt
-* 其他数据库相关字段
-
-因此 API 层使用 DTO，避免数据库结构直接泄露到接口层。
-
----
-
-# 13. Service 设计
-
-建立：
-
-`KnowledgePointService`
-
-负责知识点核心业务逻辑。
-
-概念方法：
-
-```text
-getTree()
-
-create(...)
-
-rename(...)
-
-move(...)
-
-delete(...)
-```
-
-实际 Java 方法签名在编码阶段根据当前 Entity、DTO 和代码风格确定。
-
----
-
-# 14. Service 职责
-
-Controller 只负责：
-
-* 接收请求
-* 参数绑定
-* 调用 Service
-* 返回 HTTP Response
-
-Controller 不负责：
-
-* 判断知识点是否存在
-* 判断是否重名
-* 判断是否能够删除
-* 判断是否形成环
-* 直接进行数据库业务操作
-
-这些均属于 Service。
-
----
-
-# 15. getTree()
-
-主要流程：
-
-1. Repository 查询全部 KnowledgePoint
-2. 根据父子关系组织数据
-3. 找出根节点
-4. 为每个节点构造 children
-5. 转换为 `KnowledgePointTreeResponse`
-6. 返回完整知识点树
-
-数据库为空时返回空数组。
-
----
-
-# 16. create()
-
-主要流程：
-
-1. 校验请求参数
-2. 判断 `parentId`
-3. 如果存在父节点 ID，则查询父节点
-4. 父节点不存在时抛出资源不存在异常
-5. 检查同级重名
-6. 构建 KnowledgePoint Entity
-7. Repository 保存
-8. 转换为 `KnowledgePointResponse`
-9. 返回结果
-
----
-
-# 17. rename()
-
-主要流程：
-
-1. 根据 ID 查询当前知识点
-2. 不存在则抛出资源不存在异常
-3. 校验新名称
-4. 如果名称未发生变化，可以直接成功返回
-5. 检查同级其他节点是否重名
-6. 修改名称
-7. 保存
-8. 转换为 `KnowledgePointResponse`
-9. 返回结果
-
-查重时必须排除当前知识点自身。
-
----
-
-# 18. move()
-
-主要流程：
-
-1. 查询当前知识点
-2. 不存在则抛出资源不存在异常
-3. 判断目标 `parentId`
-4. 如果目标父节点不为空，则查询目标父节点
-5. 新父节点不存在则抛出资源不存在异常
-6. 检查是否将自己设为父节点
-7. 检查是否形成环
-8. 检查移动后的同级重名
-9. 如果父节点实际没有发生变化，可以直接视为成功
-10. 修改 parent
-11. 保存
-12. 转换为 `KnowledgePointResponse`
-13. 返回
-
----
-
-# 19. delete()
-
-主要流程：
-
-1. 根据 ID 查询知识点
-2. 不存在则抛出资源不存在异常
-3. 检查是否存在子节点
-4. 有子节点则拒绝删除
-5. 检查 Question 是否引用该知识点
-6. 存在引用则拒绝删除
-7. Repository 删除
-8. Controller 返回 `204 No Content`
-
----
-
-# 20. Repository 设计
-
-Spring Data JPA 已经提供的基础能力继续复用，包括：
-
-* `findById(...)`
-* `findAll()`
-* `save(...)`
-* `delete(...)`
-
-F-003 只补充业务真正需要的查询。
-
----
-
-# 21. KnowledgePointRepository 所需查询能力
-
-主要需要解决：
-
-### 21.1 普通节点查重
-
-判断：
-
-> 指定父节点下是否已经存在指定名称的知识点。
-
-概念方法：
-
-`existsByParentIdAndName(...)`
-
----
-
-### 21.2 根节点查重
-
-判断：
-
-> 是否存在 parent 为空，并且名称相同的根节点。
-
-概念方法：
-
-`existsByParentIsNullAndName(...)`
-
-由于数据库 `UNIQUE(parent_id, name)` 对 `NULL` 的处理不能完整保证根节点名称唯一，因此根节点重名必须在业务层主动检查。
-
----
-
-### 21.3 查重时排除自身
-
-修改名称或移动节点时需要：
-
-> 查找同级同名节点，但忽略当前知识点本身。
-
-概念方法：
-
-`existsByParentIdAndNameAndIdNot(...)`
-
-以及根节点对应查询：
-
-`existsByParentIsNullAndNameAndIdNot(...)`
-
----
-
-### 21.4 子节点存在检查
-
-删除节点前需要判断：
-
-> 当前节点是否仍然拥有子节点。
-
-概念方法：
-
-`existsByParentId(...)`
-
-只关心是否存在，因此无需查询所有子节点。
-
----
-
-# 22. QuestionRepository 所需查询能力
-
-删除 KnowledgePoint 前，需要确认是否仍然存在 Question 引用当前知识点。
-
-概念上需要：
-
-> 检查是否存在关联指定 KnowledgePoint 的 Question。
-
-最终 Repository 方法名称必须根据 F-002 当前 `Question` Entity 中实际的字段名称和映射关系确定。
-
-不得脱离实际代码强行使用预设方法名。
-
----
-
-# 23. Repository 实现原则
-
-本 Feature Plan 中出现的：
-
-* `existsByParentIdAndName`
-* `existsByParentIsNullAndName`
-* `existsByParentIdAndNameAndIdNot`
-* `existsByParentIsNullAndNameAndIdNot`
-* `existsByParentId`
-
-均属于设计层面的概念名称。
-
-正式编码前必须重新检查：
-
-* `KnowledgePoint.java`
-* `Question.java`
-* `KnowledgePointRepository.java`
-* `QuestionRepository.java`
-
-根据真实实体属性确定最终 Spring Data JPA 方法名称。
-
-不得为了符合 Feature Plan 而修改已有正确的数据模型。
-
-Feature Plan 应服从现有项目实际代码和已确认架构。
-
----
-
-# 24. 参数校验
-
-F-003 使用 Bean Validation 对请求 DTO 进行基础参数校验。
-
-重点校验：
-
-`name`
-
-不得：
-
-* 为 null
-* 为空字符串
-* 全部由空白字符组成
-
-预计使用：
-
-`@NotBlank`
-
-如现有数据库已经对名称长度存在约束，则 DTO 校验应与数据库约束保持一致。
-
-是否增加：
-
-`@Size`
-
-需要根据当前 `knowledge_point.name` 字段长度确定。
-
-不得自行假设长度。
-
----
-
-# 25. HTTP 状态码设计
-
-成功：
-
-| 场景     | 状态码            |
-| ------ | -------------- |
-| 查询知识点树 | 200 OK         |
-| 新增知识点  | 201 Created    |
-| 修改名称   | 200 OK         |
-| 移动知识点  | 200 OK         |
-| 删除知识点  | 204 No Content |
-
-失败：
-
-| 场景                   | 状态码             |
-| -------------------- | --------------- |
-| 参数非法                 | 400 Bad Request |
-| KnowledgePoint 不存在   | 404 Not Found   |
-| 父 KnowledgePoint 不存在 | 404 Not Found   |
-| 名称重复                 | 409 Conflict    |
-| 自己作为自己的父节点           | 409 Conflict    |
-| 移动形成环                | 409 Conflict    |
-| 有子节点不能删除             | 409 Conflict    |
-| 被 Question 引用不能删除    | 409 Conflict    |
-
----
-
-# 26. 异常设计
-
-F-003 暂时保持简单的异常体系。
-
-建立：
-
-`ResourceNotFoundException`
-
-用于：
-
-`404 Not Found`
-
-例如：
-
-* 当前知识点不存在
-* 指定父节点不存在
-
----
-
-建立：
-
-`BusinessConflictException`
-
-用于：
-
-`409 Conflict`
-
-例如：
-
-* 同级重名
-* 根节点重名
-* 将自己设为父节点
-* 移动形成环
-* 有子节点不能删除
-* 被 Question 引用不能删除
-
----
-
-参数校验失败：
-
-优先通过 Bean Validation 和 Spring 的校验机制处理。
-
-状态：
-
-`400 Bad Request`
-
-不为每一种参数错误单独建立业务异常类。
-
----
-
-# 27. GlobalExceptionHandler
-
-建立统一异常处理器：
-
-`GlobalExceptionHandler`
-
-负责将 Java 异常转换为明确的 HTTP Response。
-
-例如：
-
-`ResourceNotFoundException`
-
-↓
-
-`404 Not Found`
-
-↓
-
-```json
-{
-  "status": 404,
-  "message": "知识点不存在"
-}
-```
-
----
-
-`BusinessConflictException`
-
-↓
-
-`409 Conflict`
-
-↓
-
-```json
-{
-  "status": 409,
-  "message": "同一父节点下已存在同名知识点"
-}
-```
-
-这样可以避免每一个 Controller 方法内部重复编写 try/catch。
-
----
-
-# 28. Controller 设计
-
-建立：
-
-`KnowledgePointController`
-
-负责暴露：
-
-```text
-GET    /api/knowledge-points/tree
-
-POST   /api/knowledge-points
-
-PATCH  /api/knowledge-points/{id}/name
-
-PATCH  /api/knowledge-points/{id}/parent
-
-DELETE /api/knowledge-points/{id}
-```
-
-Controller 主要负责：
-
-* 接收路径参数
-* 接收 JSON Body
-* Bean Validation
-* 调用 KnowledgePointService
-* 设置正确的 HTTP Status
-* 返回 DTO
-
-不得将核心业务规则直接写入 Controller。
-
----
-
-# 29. 预计代码结构
-
-最终具体包路径以当前项目已有 package 结构为准。
-
-概念结构如下：
-
-```text
-controller/
-└── KnowledgePointController
-
-dto/
-├── CreateKnowledgePointRequest
-├── UpdateKnowledgePointNameRequest
-├── MoveKnowledgePointRequest
-├── KnowledgePointResponse
-├── KnowledgePointTreeResponse
-└── ErrorResponse
-
-service/
-└── KnowledgePointService
-
-exception/
-├── ResourceNotFoundException
-├── BusinessConflictException
-└── GlobalExceptionHandler
-
-entity/
-├── KnowledgePoint
-└── Question
-
-repository/
-├── KnowledgePointRepository
-└── QuestionRepository
-```
-
-F-003 不重复创建已经存在的 Entity 或 Repository。
-
-只在现有代码基础上补充所需内容。
-
----
-
-# 30. 测试策略
-
-F-003 不以“手动请求能成功”为完成标准。
-
-核心业务必须由自动化测试覆盖。
-
-开发采用：
-
-实现一个功能
-
-↓
-
-编写对应测试
-
-↓
-
-运行测试
-
-↓
-
-确认通过
-
-↓
-
-继续下一个功能
-
-而不是最后一次性补测试。
-
----
-
-# 31. 新增知识点测试
-
-至少覆盖：
-
-### 正常场景
-
-* 新增根节点成功
-* 在已有节点下新增子节点成功
-
-### 异常场景
-
-* 父节点不存在
-* 普通节点同级重名
-* 根节点重名
-* name 为 null
-* name 为空
-* name 全为空格
-
----
-
-# 32. 修改名称测试
-
-至少覆盖：
-
-### 正常场景
-
-* 正常修改名称
-* 修改为当前原名称
-
-### 异常场景
-
-* 当前 KnowledgePoint 不存在
-* 新名称为空
-* 与兄弟节点重名
-* 根节点与其他根节点重名
-
----
-
-# 33. 移动知识点测试
-
-至少覆盖：
-
-### 正常场景
-
-* 正常移动到其他父节点
-* 移动为根节点
-* 移动到当前原父节点
-
-### 异常场景
-
-* 当前 KnowledgePoint 不存在
-* 新父节点不存在
-* 把自己设置为自己的父节点
-* 移动到自己的直接子节点下面
-* 移动到自己的更深层后代下面
-* 移动后与兄弟节点重名
-* 移动为根节点后与其他根节点重名
-
----
-
-# 34. 删除知识点测试
-
-至少覆盖：
-
-### 正常场景
-
-* 无子节点且未被 Question 引用时删除成功
-
-### 异常场景
-
-* KnowledgePoint 不存在
-* KnowledgePoint 存在子节点
-* KnowledgePoint 被 Question 引用
-
-删除成功后应确认对应数据库记录已经不存在。
-
----
-
-# 35. 知识点树查询测试
-
-至少覆盖：
-
-### 场景一
-
-数据库为空。
-
-预期：
-
-```json
-[]
-```
-
-### 场景二
-
-只有一个根节点。
-
-### 场景三
-
-存在多个根节点。
-
-### 场景四
-
-存在两层知识点。
-
-### 场景五
-
-存在三层及以上知识点。
-
-需要确认：
-
-* 根节点正确
-* children 正确
-* 层级关系正确
-* 节点没有丢失
-* 节点没有重复
-
----
-
-# 36. Controller / API 测试
-
-除 Service 层测试外，需要针对 Controller 验证至少以下内容：
-
-* URL 是否正确
-* HTTP Method 是否正确
-* Request Body 是否能够正常绑定
-* 参数校验是否生效
-* 成功状态码是否正确
-* 失败状态码是否正确
-* JSON Response 结构是否正确
-* DELETE 成功是否返回 204
-
----
-
-# 37. 开发顺序
-
-F-003 按以下顺序逐步实现。
-
-## Step 1：检查 F-002 当前代码
-
-正式编码前重新检查：
-
-* `KnowledgePoint.java`
-* `Question.java`
-* `KnowledgePointRepository.java`
-* `QuestionRepository.java`
-* `application.yaml`
-* `pom.xml`
-* 现有测试结构
-* 当前 package 结构
-
-目的：
-
-确保 Feature Plan 与真实代码一致。
-
----
-
-## Step 2：创建 F-003 Feature 分支
-
-建议分支：
-
-`feature/F-003-knowledge-point-management`
-
----
-
-## Step 3：建立 F-003 Feature Plan
-
-文件建议：
-
-`docs/plans/active/F-003-knowledge-point-management.md`
-
-本文档即作为初始内容。
-
----
-
-## Step 4：补充 Repository 查询能力
-
-只添加 F-003 当前真正需要的方法。
-
-完成后运行 Repository 相关测试。
-
----
-
-## Step 5：实现 DTO 与参数校验
-
-优先实现：
-
-* CreateKnowledgePointRequest
-* UpdateKnowledgePointNameRequest
-* MoveKnowledgePointRequest
-* KnowledgePointResponse
-* KnowledgePointTreeResponse
-* ErrorResponse
-
----
-
-## Step 6：实现新增知识点
-
-优先选择新增功能打通第一条完整链路：
-
-POST Request
-
-↓
-
-Controller
-
-↓
-
-CreateKnowledgePointRequest
-
-↓
-
-Service
-
-↓
-
-Repository
-
-↓
-
-MySQL
-
-↓
-
-KnowledgePointResponse
-
-↓
-
+```http
 201 Created
+```
 
-新增功能作为 F-003 第一条完整 REST 调用链。
+```json
+{
+  "id": 3,
+  "name": "TCP",
+  "parentId": 2
+}
+```
 
----
+### 11.4 修改知识点
 
-## Step 7：实现知识点查询树
+请求：
 
-完成：
+```http
+PUT /api/knowledge-points/3
+Content-Type: application/json
+```
 
-`GET /api/knowledge-points/tree`
+请求体需要提交完整可编辑状态：
 
-重点理解：
+```json
+{
+  "name": "TCP/IP",
+  "parentId": 2
+}
+```
 
-数据库平面记录
+成功响应：
 
-↓
+```http
+200 OK
+```
 
-Service
+```json
+{
+  "id": 3,
+  "name": "TCP/IP",
+  "parentId": 2
+}
+```
 
-↓
+调用方应始终提交 `parentId` 字段：
 
-树状 DTO
+- 根节点保持 `null`。
+- 普通节点提交当前或新的同树父节点 ID。
 
----
+### 11.5 删除知识点
 
-## Step 8：实现修改名称
+请求：
 
-完成：
+```http
+DELETE /api/knowledge-points/3
+```
 
-`PATCH /api/knowledge-points/{id}/name`
+成功响应：
 
-重点实现同级查重以及排除自身。
+```http
+200 OK
+```
 
----
-
-## Step 9：实现移动知识点
-
-完成：
-
-`PATCH /api/knowledge-points/{id}/parent`
-
-重点实现：
-
-* 新父节点验证
-* 自引用验证
-* 环检测
-* 移动后重名验证
-
-该部分预计是 F-003 业务逻辑复杂度最高的部分。
-
----
-
-## Step 10：实现删除知识点
-
-完成：
-
-`DELETE /api/knowledge-points/{id}`
-
-实现：
-
-* 子节点保护
-* Question 引用保护
-* 204 No Content
-
----
-
-## Step 11：实现统一异常处理
-
-建立：
-
-* ResourceNotFoundException
-* BusinessConflictException
-* GlobalExceptionHandler
-* ErrorResponse
-
-统一：
-
-400 / 404 / 409
-
-响应行为。
+```json
+{
+  "message": "知识点删除成功"
+}
+```
 
 ---
 
-## Step 12：补齐自动化测试
+## 12. DTO 设计
 
-根据前述测试范围补齐：
+建议 DTO：
 
-* Service Test
-* Controller Test
-* 必要的 Repository Test
+### 12.1 CreateKnowledgePointRequest
 
-运行完整测试：
+字段：
 
-`mvnw test`
+- `String name`
+- `Long parentId`
 
-要求全部通过。
+用途：创建根节点或子节点。
 
----
+### 12.2 UpdateKnowledgePointRequest
 
-# 38. 开发原则
+字段：
 
-F-003 开发过程中遵守以下原则。
+- `String name`
+- `Long parentId`
 
-### 原则一：以现有代码为唯一实现基础
+用途：修改名称或在同一知识树内调整父节点。
 
-Feature Plan 属于设计约束，但如果计划中的字段名称、Repository 方法名称等与真实代码不符：
+虽然当前字段与创建请求相同，仍使用独立 DTO，以保持创建和修改 API 合同的语义边界。
 
-以当前已经确认并测试通过的项目代码为准。
+### 12.3 KnowledgePointResponse
 
-先分析差异，再决定是否修改设计。
+字段：
 
-不得为了让代码符合文档而破坏已经完成的 F-002 数据模型。
+- `Long id`
+- `String name`
+- `Long parentId`
 
----
+用途：创建和修改成功响应。
 
-### 原则二：一次实现一个小功能
+### 12.4 KnowledgePointTreeNodeResponse
 
-避免一次生成整个 F-003。
+字段：
 
-推荐：
+- `Long id`
+- `String name`
+- `Long parentId`
+- `List<KnowledgePointTreeNodeResponse> children`
 
-新增
+用途：嵌套知识树响应。
 
-↓
+### 12.5 MessageResponse
 
-测试
+字段：
 
-↓
+- `String message`
 
-查询
+用途：删除成功响应。
 
-↓
+### 12.6 ApiErrorResponse
 
-测试
+字段：
 
-↓
+- `Instant timestamp`
+- `int status`
+- `String code`
+- `String message`
+- `String path`
+- `Map<String, String> fieldErrors`（仅参数校验失败时使用）
 
-改名
-
-↓
-
-测试
-
-↓
-
-移动
-
-↓
-
-测试
-
-↓
-
-删除
-
-↓
-
-测试
-
-↓
-
-异常处理与整体整理
+F-003 不增加通用 `ApiResponse<T>` 成功包装层。成功接口直接返回对应 DTO。
 
 ---
 
-### 原则三：边开发边理解
+## 13. HTTP 状态码与错误码
 
-对于新的 Java / Spring 概念，例如：
+### 13.1 状态码规则
 
-* DTO
-* `@RequestBody`
-* `@PathVariable`
-* `@Valid`
-* `@NotBlank`
-* Service
-* Spring Data JPA 派生查询
-* `ResponseEntity`
-* `@RestControllerAdvice`
-* Exception Handler
+| 场景 | HTTP 状态码 |
+| --- | ---: |
+| 查询成功 | 200 |
+| 创建成功 | 201 |
+| 修改成功 | 200 |
+| 删除成功 | 200 |
+| Validation 失败 | 400 |
+| 请求体不是合法 JSON | 400 |
+| 目标知识点或父节点不存在 | 404 |
+| 名称冲突 | 409 |
+| 自引用或循环引用 | 409 |
+| 非法跨树移动 | 409 |
+| 根节点或普通节点非法改变根归属 | 409 |
+| 删除受子节点或错题引用限制 | 409 |
+| 数据库完整性冲突 | 409 |
 
-在第一次实际使用时解释其作用。
+### 13.2 错误码建议
 
-不要求在开发前一次性学习完整理论。
+| 错误码 | 状态 | 含义 |
+| --- | ---: | --- |
+| `VALIDATION_FAILED` | 400 | 请求字段校验失败 |
+| `MALFORMED_REQUEST_BODY` | 400 | JSON 请求体无法解析 |
+| `KNOWLEDGE_POINT_NOT_FOUND` | 404 | 目标或父知识点不存在 |
+| `KNOWLEDGE_POINT_NAME_CONFLICT` | 409 | 同级或根节点名称冲突 |
+| `KNOWLEDGE_POINT_SELF_PARENT` | 409 | 节点把自己设为父节点 |
+| `KNOWLEDGE_POINT_CYCLE` | 409 | 调整层级会形成环 |
+| `KNOWLEDGE_POINT_CROSS_TREE_MOVE_FORBIDDEN` | 409 | 跨根节点移动被禁止 |
+| `KNOWLEDGE_POINT_ROOT_CHANGE_FORBIDDEN` | 409 | 根节点或普通节点非法改变根归属 |
+| `KNOWLEDGE_POINT_HAS_CHILDREN` | 409 | 存在子节点，不能删除 |
+| `KNOWLEDGE_POINT_IN_USE` | 409 | 被错题引用，不能删除 |
+| `DATA_INTEGRITY_CONFLICT` | 409 | 数据库完整性约束冲突 |
 
----
+### 13.3 业务冲突响应示例
 
-### 原则四：Controller 保持轻量
+```json
+{
+  "timestamp": "2026-08-31T17:20:00Z",
+  "status": 409,
+  "code": "KNOWLEDGE_POINT_NAME_CONFLICT",
+  "message": "同一父节点下已存在同名知识点",
+  "path": "/api/knowledge-points"
+}
+```
 
-Controller 不实现核心业务判断。
+### 13.4 Validation 响应示例
 
-Controller 负责 HTTP。
-
-Service 负责业务。
-
-Repository 负责数据访问。
-
----
-
-### 原则五：不提前过度设计
-
-F-003 不提前加入：
-
-* 通用 BaseResponse
-* 复杂 Result<T>
-* 大型异常码体系
-* 自定义业务状态码
-* 分布式 traceId
-* 复杂 Mapper 框架
-* CQRS
-* DDD 聚合设计
-* 事件总线
-* 缓存
-* Redis
-
-只有后续出现真实需求时再引入。
-
----
-
-# 39. F-003 完成定义（Definition of Done）
-
-F-003 只有满足以下全部条件才视为完成。
-
-## 功能
-
-* [ ] 可以查询完整知识点树
-* [ ] 可以新增根知识点
-* [ ] 可以新增子知识点
-* [ ] 可以修改知识点名称
-* [ ] 可以移动知识点
-* [ ] 可以将知识点移动为根节点
-* [ ] 可以删除合法知识点
-
-## 业务规则
-
-* [ ] 普通节点同级不能重名
-* [ ] 根节点不能重名
-* [ ] 修改名称查重时正确排除自身
-* [ ] 不能把自己设置为父节点
-* [ ] 移动知识点不能形成环
-* [ ] 移动后不能产生同级重名
-* [ ] 有子节点不能删除
-* [ ] 被 Question 引用不能删除
-
-## API
-
-* [ ] GET tree 返回 200
-* [ ] POST 创建成功返回 201
-* [ ] PATCH 修改名称成功返回 200
-* [ ] PATCH 移动成功返回 200
-* [ ] DELETE 成功返回 204
-* [ ] 参数非法返回 400
-* [ ] 资源不存在返回 404
-* [ ] 业务冲突返回 409
-
-## 代码结构
-
-* [ ] DTO 与 Entity 分离
-* [ ] Controller 不包含核心业务逻辑
-* [ ] Service 承担业务规则
-* [ ] Repository 只负责数据访问
-* [ ] 统一异常处理正常工作
-
-## 测试
-
-* [ ] Repository 所需查询测试通过
-* [ ] Service 核心业务测试通过
-* [ ] Controller / API 测试通过
-* [ ] 环检测测试通过
-* [ ] 删除保护测试通过
-* [ ] 完整 `mvnw test` BUILD SUCCESS
-
-## 文档
-
-* [ ] F-003 Feature Plan 与最终实现保持一致
-* [ ] 实现过程中产生的重要设计变化已经回写 Feature Plan
-* [ ] `project-status.md` 已同步
-* [ ] F-003 完成后 Feature Plan 从 `active` 移动到 `completed`
+```json
+{
+  "timestamp": "2026-08-31T17:20:00Z",
+  "status": 400,
+  "code": "VALIDATION_FAILED",
+  "message": "请求参数校验失败",
+  "path": "/api/knowledge-points",
+  "fieldErrors": {
+    "name": "知识点名称不能为空"
+  }
+}
+```
 
 ---
 
-# 40. F-003 最终预期结果
+## 14. Repository 变更计划
 
-F-003 完成之后，系统将第一次具备一个相对完整的后端业务模块。
+### 14.1 KnowledgePointRepository
 
-调用方可以通过 REST API 对知识点树进行：
+根据 Service 的实际查询需求增加派生查询方法，预计包括：
 
-查询
+- 按 ID 升序查询全部知识点。
+- 检查根节点名称是否存在。
+- 更新时检查除当前节点外的根节点名称冲突。
+- 检查指定父节点下的名称是否存在。
+- 更新时检查除当前节点外的同级名称冲突。
+- 检查某知识点是否存在直接子节点。
 
+方法名应以 Spring Data JPA 当前版本能够正常解析为准，最终由自动化测试验证，不在本计划中强行绑定具体拼写。
+
+### 14.2 QuestionRepository
+
+为根节点改名和删除保护增加实际需要的查询：
+
+- 根据 `subject` 查询相关 Question。
+- 检查是否存在关联指定 KnowledgePoint 的 Question。
+
+F-003 不增加与错题管理无关的其他查询方法。
+
+---
+
+## 15. Service 处理流程
+
+### 15.1 创建流程
+
+```text
+接收请求
 ↓
-
-创建
-
+清理名称首尾空格
 ↓
-
-修改
-
+检查通用长度
 ↓
-
-移动
-
+根据 parentId 判断根节点或子节点
 ↓
+根节点执行 50 字符限制和根重名检查
+子节点检查父节点存在及同级重名
+↓
+创建 KnowledgePoint
+↓
+Repository 保存
+↓
+转换为 KnowledgePointResponse
+```
 
-删除
+### 15.2 修改流程
 
-同时 Service 层能够保证数据库中的知识点始终维持合法树结构。
+```text
+查询目标节点
+↓
+清理并校验名称
+↓
+判断目标是根节点还是普通节点
+↓
+校验 parentId 是否符合根归属规则
+↓
+普通节点执行自引用、循环和同树移动检查
+↓
+执行重名检查
+↓
+如果根节点改名，查询并同步 Question.subject
+↓
+修改 Entity
+↓
+事务提交
+↓
+返回 KnowledgePointResponse
+```
 
-F-003 完成后，KnowledgePoint 将不再只是 F-002 中的数据库 Entity，而会成为一个真正可以被外部系统调用和管理的业务模块。
+### 15.3 删除流程
 
-在此基础上，后续 Question 错题管理功能即可正式使用 KnowledgePoint 作为稳定的知识点关联对象。
+```text
+查询目标节点
+↓
+检查是否存在直接子节点
+↓
+检查是否被 Question 引用
+↓
+全部通过后删除
+↓
+返回 MessageResponse
+```
+
+### 15.4 查询知识树流程
+
+```text
+一次按 id 升序查询全部 KnowledgePoint
+↓
+为每个 Entity 创建响应节点
+↓
+建立 id → 响应节点映射
+↓
+根据 parentId 将子节点加入父节点 children
+↓
+收集 parentId = null 的根节点
+↓
+返回完整树
+```
+
+知识树组装时间复杂度目标为：
+
+```text
+O(n)
+```
+
+不为当前个人使用规模引入路径字段、闭包表或专用树数据库。
+
+---
+
+## 16. 代码结构计划
+
+预计新增或修改的主要结构：
+
+```text
+backend/src/main/java/com/wrongquestion/backend
+├── common
+│   └── exception
+│       ├── ApiErrorResponse.java
+│       └── GlobalExceptionHandler.java
+│
+├── knowledge
+│   ├── controller
+│   │   └── KnowledgePointController.java
+│   ├── dto
+│   │   ├── CreateKnowledgePointRequest.java
+│   │   ├── UpdateKnowledgePointRequest.java
+│   │   ├── KnowledgePointResponse.java
+│   │   ├── KnowledgePointTreeNodeResponse.java
+│   │   └── MessageResponse.java
+│   ├── entity
+│   │   └── KnowledgePoint.java
+│   ├── exception
+│   │   ├── KnowledgePointNotFoundException.java
+│   │   └── KnowledgePointConflictException.java
+│   ├── repository
+│   │   └── KnowledgePointRepository.java
+│   └── service
+│       └── KnowledgePointService.java
+│
+└── question
+    ├── entity
+    │   └── Question.java
+    └── repository
+        └── QuestionRepository.java
+```
+
+最终文件名可以根据实现中的清晰度进行小幅调整，但不得改变已确认的分层职责。
+
+---
+
+## 17. 依赖变更
+
+在 `pom.xml` 中增加 Validation 所需依赖：
+
+```text
+spring-boot-starter-validation
+```
+
+不增加：
+
+- MapStruct。
+- Lombok。
+- H2。
+- Testcontainers。
+- Flyway。
+- 其他当前没有实际用途的依赖。
+
+---
+
+## 18. Transaction 设计
+
+### 18.1 写事务
+
+以下 Service 方法使用 `@Transactional`：
+
+- 创建知识点。
+- 修改知识点。
+- 删除知识点。
+
+### 18.2 只读事务
+
+知识树查询使用：
+
+```text
+@Transactional(readOnly = true)
+```
+
+### 18.3 根节点改名事务
+
+根节点名称和相关错题 `subject` 必须在同一事务中更新。
+
+不允许：
+
+```text
+先提交根节点改名
+↓
+再单独更新 Question.subject
+```
+
+否则第二步失败时会产生数据不一致。
+
+---
+
+## 19. 测试方案
+
+### 19.1 测试原则
+
+F-003 同时使用：
+
+- Service 单元测试。
+- Controller 真实 MySQL 集成测试。
+
+单元测试重点验证业务分支，集成测试重点验证真实完整链路。
+
+不要求同一业务规则在两个测试层中完全重复。
+
+### 19.2 Service 单元测试
+
+使用 JUnit 和 Mockito，模拟 Repository。
+
+建议测试类：
+
+```text
+KnowledgePointServiceTest
+```
+
+至少覆盖：
+
+- 创建根节点成功。
+- 创建子节点成功。
+- 名称首尾空格被清理。
+- 根节点超过 50 字符被拒绝。
+- 普通节点超过 100 字符被 Validation 或 Service 拒绝。
+- 根节点重名被拒绝。
+- 同级子节点重名被拒绝。
+- 不同父节点同名允许。
+- 父节点不存在被拒绝。
+- 同一知识树内移动成功。
+- 自引用被拒绝。
+- 循环引用被拒绝。
+- 跨根节点移动被拒绝。
+- 根节点变成子节点被拒绝。
+- 子节点升级为根节点被拒绝。
+- 根节点改名时相关 Question 的 `subject` 被同步修改。
+- 删除普通叶子节点成功。
+- 存在子节点时删除被拒绝。
+- 被 Question 引用时删除被拒绝。
+- 删除不存在的知识点被拒绝。
+- 查询结果正确组装为嵌套树。
+- 根节点和同级节点按照 ID 升序排列。
+
+### 19.3 Controller 集成测试
+
+继续使用当前项目的真实 MySQL 测试方式：
+
+```text
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+```
+
+建议测试类：
+
+```text
+KnowledgePointControllerTest
+```
+
+至少覆盖代表性的完整链路：
+
+- `POST` 创建根节点返回 201。
+- `POST` 创建子节点返回 201。
+- `GET` 返回正确嵌套树和空 `children` 数组。
+- `PUT` 改名返回 200。
+- `PUT` 同树移动返回 200。
+- 根节点改名后真实数据库中的 `Question.subject` 同步变化。
+- `DELETE` 成功返回 200 和 `知识点删除成功`。
+- 空名称返回 400。
+- 超长名称返回 400 或对应业务错误。
+- 知识点不存在返回 404。
+- 重名返回 409。
+- 跨树移动返回 409。
+- 删除有子节点的知识点返回 409。
+- 删除被错题引用的知识点返回 409。
+- 错误响应包含约定的 `status`、`code`、`message` 和 `path`。
+- Validation 错误包含 `fieldErrors`。
+
+### 19.4 原有测试保护
+
+以下原有测试必须继续通过：
+
+- `BackendApplicationTests`。
+- `HealthControllerTest`。
+- `QuestionRepositoryTest`。
+- `KnowledgePointRepositoryTest`。
+
+### 19.5 测试数据清理
+
+Controller 集成测试继续使用事务回滚，避免测试数据长期污染开发数据库。
+
+### 19.6 最终测试命令
+
+Windows PowerShell：
+
+```powershell
+.\mvnw test
+```
+
+最终要求：
+
+```text
+BUILD SUCCESS
+```
+
+---
+
+## 20. 手工 API 验证
+
+自动化测试通过后，启动后端，至少实际走通一次：
+
+```text
+创建临时根节点
+↓
+创建子节点
+↓
+查询知识树
+↓
+修改名称
+↓
+在同一知识树内移动节点
+↓
+删除没有引用的叶子节点
+↓
+清理临时数据
+```
+
+同时验证代表性失败场景：
+
+- 根节点或同级名称重名。
+- 跨知识树移动。
+- 删除存在子节点的知识点。
+- 删除被错题引用的知识点。
+- 根节点改名后相关错题 `subject` 同步更新。
+
+手工验证可使用 Postman、IDEA HTTP Client 或其他 HTTP 客户端，不限定具体工具。
+
+---
+
+## 21. 文档变更计划
+
+### 21.1 新增 ADR-002
+
+建议文件：
+
+```text
+docs/decisions/ADR-002-use-spring-data-jpa.md
+```
+
+至少记录：
+
+- 项目实际采用 Spring Data JPA + Hibernate。
+- 替代 ADR-001 中的 MyBatis 与 MyBatis-Plus 决定。
+- 当前未采用 Flyway。
+- 当前数据库结构仍以 `database-design.md`、`sql/init.sql` 和真实 MySQL 为准。
+- 未来数据库结构演进变复杂时再评估迁移工具。
+
+### 21.2 更新 database-design.md
+
+- 修正 F-002 状态和过期下一步。
+- 明确数据库维护时间字段。
+- 记录根节点名称最多 50 字符的业务限制。
+- 记录禁止跨根节点移动。
+- 记录根节点改名同步 `question.subject`。
+- 记录严格删除规则由 Service 预检查、数据库约束兜底。
+
+### 21.3 更新 api-design.md
+
+- 记录四个知识点 REST API。
+- 记录请求和响应 JSON。
+- 记录 HTTP 状态码和错误结构。
+
+如果该文档当前为空，则在本 Feature 中补充知识点 API 章节。
+
+### 21.4 更新 project-status.md
+
+F-003 开始时更新为 Active；F-003 完成时更新为 Completed。
+
+完成时记录：
+
+- 新增的业务层与 API。
+- 最终测试数量和结果。
+- 实际项目结构。
+- 下一阶段仍需单独规划。
+
+### 21.5 更新本 Feature Plan
+
+实现过程中按任务清单更新进度。
+
+F-003 完成后：
+
+```text
+docs/plans/active/F-003-knowledge-point-management.md
+```
+
+移动为：
+
+```text
+docs/plans/completed/F-003-knowledge-point-management.md
+```
+
+---
+
+## 22. 实施顺序
+
+### 阶段 0：开发前检查
+
+- [ ] 检查 `git status`。
+- [ ] 确认工作区无意外改动。
+- [ ] 确认或切换到 `feature/F-003-knowledge-point-management`。
+- [ ] 确认 MySQL 服务和 `DB_PASSWORD` 可用。
+
+### 阶段 1：修正技术决策记录
+
+- [ ] 新增 ADR-002。
+- [ ] 明确 JPA/Hibernate 为当前真实数据访问方案。
+
+### 阶段 2：准备依赖与数据访问查询
+
+- [ ] 添加 `spring-boot-starter-validation`。
+- [ ] 为 `KnowledgePointRepository` 增加必要查询。
+- [ ] 为 `QuestionRepository` 增加必要查询。
+
+### 阶段 3：建立 DTO 与异常响应
+
+- [ ] 创建请求 DTO。
+- [ ] 创建普通响应 DTO。
+- [ ] 创建知识树响应 DTO。
+- [ ] 创建删除成功响应 DTO。
+- [ ] 创建统一错误响应 DTO。
+- [ ] 创建知识点业务异常。
+- [ ] 创建全局 Exception Handler。
+
+### 阶段 4：实现 Service
+
+- [ ] 实现名称清理和长度规则。
+- [ ] 实现根节点与同级重名检查。
+- [ ] 实现创建逻辑。
+- [ ] 实现同树移动检查。
+- [ ] 实现自引用和循环检查。
+- [ ] 实现根节点移动限制。
+- [ ] 实现根节点改名和 `subject` 同步。
+- [ ] 实现严格删除检查。
+- [ ] 实现 O(n) 知识树组装。
+- [ ] 添加正确事务边界。
+
+### 阶段 5：实现 Controller
+
+- [ ] 实现 `GET /api/knowledge-points/tree`。
+- [ ] 实现 `POST /api/knowledge-points`。
+- [ ] 实现 `PUT /api/knowledge-points/{id}`。
+- [ ] 实现 `DELETE /api/knowledge-points/{id}`。
+- [ ] 确认状态码和响应 DTO。
+
+### 阶段 6：自动化测试
+
+- [ ] 完成 Service 单元测试。
+- [ ] 完成 Controller 真实 MySQL 集成测试。
+- [ ] 执行全量 Maven 测试。
+- [ ] 修复所有失败和错误。
+
+### 阶段 7：手工验证
+
+- [ ] 启动后端。
+- [ ] 走通四个知识点 API。
+- [ ] 验证主要失败场景。
+- [ ] 验证根节点改名事务。
+- [ ] 清理临时验证数据。
+
+### 阶段 8：文档与 Git 收尾
+
+- [ ] 更新 `api-design.md`。
+- [ ] 更新 `database-design.md`。
+- [ ] 更新 `project-status.md`。
+- [ ] 更新本 Feature Plan 状态。
+- [ ] 再次执行全量测试。
+- [ ] 检查 `git diff` 和 `git status`。
+- [ ] 提交 F-003 代码与文档。
+- [ ] 推送功能分支。
+- [ ] 完成后将 Plan 移入 `plans/completed`。
+
+---
+
+## 23. 验收标准
+
+### 23.1 功能验收
+
+- [ ] 四个知识点接口均可正常调用。
+- [ ] 查询接口返回正确的嵌套树。
+- [ ] 创建根节点和子节点成功。
+- [ ] 名称清理、长度和重名规则生效。
+- [ ] 同一知识树内移动成功。
+- [ ] 自引用和循环引用被拒绝。
+- [ ] 跨根节点移动被拒绝。
+- [ ] 根节点不能变成子节点。
+- [ ] 普通节点不能升级为根节点。
+- [ ] 根节点改名同步相关错题 `subject`。
+- [ ] 严格删除规则生效。
+- [ ] 删除成功返回 200 和 JSON 成功消息。
+
+### 23.2 API 验收
+
+- [ ] 创建返回 201。
+- [ ] 查询返回 200。
+- [ ] 修改返回 200。
+- [ ] 删除返回 200。
+- [ ] Validation 失败返回 400。
+- [ ] 目标不存在返回 404。
+- [ ] 业务冲突返回 409。
+- [ ] 错误响应字段与本计划一致。
+- [ ] Controller 不直接返回 Entity。
+
+### 23.3 代码验收
+
+- [ ] Controller 不直接调用 Repository。
+- [ ] Validation 只负责通用格式校验。
+- [ ] Service 统一负责业务规则。
+- [ ] 写操作具有明确事务边界。
+- [ ] 根节点改名与错题 `subject` 更新在同一事务。
+- [ ] 不存在没有真实用途的 Service 接口或 Mapper 框架。
+- [ ] 不修改数据库表结构。
+- [ ] 项目可以正常编译和启动。
+
+### 23.4 测试验收
+
+- [ ] Service 单元测试覆盖约定业务分支。
+- [ ] Controller 真实 MySQL 集成测试覆盖代表性链路。
+- [ ] 原有测试继续通过。
+- [ ] `\.\mvnw test` 输出 `BUILD SUCCESS`。
+- [ ] 测试数据通过事务回滚。
+
+### 23.5 文档验收
+
+- [ ] ADR-002 已新增。
+- [ ] `database-design.md` 过期内容已修正。
+- [ ] 知识点 API 已记录。
+- [ ] `project-status.md` 与真实代码一致。
+- [ ] 本 Feature Plan 的状态和任务清单已同步。
+
+### 23.6 Git 验收
+
+- [ ] 所有 F-003 相关代码和文档已提交。
+- [ ] 最终工作区干净。
+- [ ] 功能分支已推送。
+- [ ] 实现、测试结果和文档状态一致。
+
+---
+
+## 24. 风险与处理
+
+### 24.1 Service 预检查与数据库约束重复
+
+Service 预检查用于返回清晰业务错误，数据库 UNIQUE、FOREIGN KEY 和 RESTRICT 用于兜底。
+
+两者不是重复浪费，而是不同层次的数据保护。
+
+### 24.2 根节点名称与 subject 重复保存
+
+当前 F-002 已确定 `question.subject` 为字符串，同时根节点代表科目。
+
+F-003 通过以下规则降低不一致风险：
+
+- 根节点名称最多 50 字符。
+- 根节点改名同步 `question.subject`。
+- 同步操作使用事务。
+- 禁止跨根节点移动。
+
+F-003 不重新设计 Subject 数据模型。
+
+### 24.3 多次查询或 N+1
+
+知识树查询应一次读取全部知识点，再在 Java 中组装。
+
+实现时不得直接递归查询每个节点的子节点。
+
+### 24.4 真实 MySQL 测试依赖本地环境
+
+当前项目已经采用真实 MySQL 集成测试，本 Feature 延续现状。
+
+如果未来需要自动 CI，再单独评估 Testcontainers 或独立测试数据库，不在 F-003 提前引入。
+
+### 24.5 并发冲突
+
+当前 MVP 为单用户，Service 预检查足够支撑正常使用。
+
+数据库唯一约束和外键继续处理极端竞争情况下的数据完整性。
+
+F-003 不增加分布式锁或复杂并发控制。
+
+---
+
+## 25. 已确认决策汇总
+
+| 决策项 | 结论 |
+| --- | --- |
+| F-003 主目标 | 完整知识点管理业务层与 REST API |
+| API 数量 | 4 个 |
+| 查询形式 | 完整嵌套树 |
+| 分页 | 不使用 |
+| 排序 | 同级按 ID 升序 |
+| 根节点最大长度 | 50 字符 |
+| 普通节点最大长度 | 100 字符 |
+| 英文大小写 | 根据当前数据库排序规则视为不区分 |
+| 跨树移动 | 禁止 |
+| 根节点变为子节点 | 禁止 |
+| 子节点升级为根节点 | 禁止 |
+| 根节点改名 | 允许，并同步 Question.subject |
+| 删除 | 仅无子节点且无错题引用时允许 |
+| 删除成功响应 | 200 + JSON 消息 |
+| Service 结构 | 单个具体类，不建立接口/Impl |
+| DTO | Java record |
+| Entity 是否直接暴露 | 否 |
+| 事务 | Service 写事务，查询只读事务 |
+| 异常处理 | 统一 Exception Handler |
+| 数据库表变更 | 无 |
+| 测试 | Service 单元测试 + Controller 真实 MySQL 集成测试 |
+| 手工验证 | 必须 |
+| ADR | 新增 ADR-002 |
+
+---
+
+## 26. 完成定义
+
+F-003 只有在以下条件全部满足后才能标记为 Completed：
+
+1. 本计划范围内的四个 API 全部实现。
+2. 所有已确认业务规则生效。
+3. Service、DTO、Validation、Transaction、Controller 和 Exception Handler 职责清晰。
+4. Service 单元测试和 Controller 真实 MySQL 集成测试全部通过。
+5. 原有测试未被破坏。
+6. 全量 Maven 测试为 `BUILD SUCCESS`。
+7. 手工 API 验证完成并清理临时数据。
+8. ADR-002、API、数据库设计和项目状态文档已同步。
+9. 代码、测试结果和文档一致。
+10. Git 工作区干净，功能分支已推送。
+11. Feature Plan 已从 `plans/active` 移入 `plans/completed`。
+
+当前没有未确认的 F-003 业务或技术决策。
