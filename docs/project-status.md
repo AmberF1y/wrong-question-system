@@ -14,7 +14,7 @@
 | --- | --- | --- |
 | F-001 | Completed | Spring Boot 项目初始化与健康检查 |
 | F-002 | Completed | 数据库设计、JPA Entity、Repository 与真实 MySQL 集成测试 |
-| F-003 | Active | 知识点管理实现与验证已完成，待 Git 收尾 |
+| F-003 | Completed | 知识点管理业务层、REST API、异常响应与测试 |
 
 当前开发分支：
 
@@ -28,7 +28,13 @@ F-003 实现前 Git 基线：
 fadc129 docs: finalize F-003 knowledge point management plan
 ```
 
-当前 F-003 代码和文档尚未提交。完成最终差异检查、提交和推送后，才能将 F-003 标记为 Completed。
+F-003 实现提交：
+
+```text
+f13a8fa feat: implement F-003 knowledge point management
+```
+
+该提交已经推送到远端功能分支。F-003 收尾文档提交完成后，功能分支应继续保持与远端一致且工作区 clean。
 
 ---
 
@@ -243,13 +249,12 @@ Windows PowerShell 5.1 对 JSON UTF-8 的显示出现乱码和单元素数组包
 
 ---
 
-## 12. F-003 剩余工作
+## 12. F-003 完成状态
 
-- 检查 `git diff` 和 `git status`；
-- 提交并推送 F-003 实现；
-- 更新 F-003 为 Completed；
-- 将 Feature Plan 从 `plans/active` 移到 `plans/completed`；
-- 提交并推送 Feature 收尾文档；
-- 确认最终工作区 clean。
+- 实现、自动化测试和手工验证全部完成；
+- 实现提交 `f13a8fa` 已推送；
+- Feature Plan 已移入 `docs/plans/completed/`；
+- F-003 未遗留待实现业务范围；
+- F-003 未新增 ADR，也未修改数据库表结构。
 
-下一阶段尚未规划，不在 F-003 中提前加入功能。
+当前没有 Active Feature。下一阶段必须单独规划，不在 F-003 中提前加入功能。

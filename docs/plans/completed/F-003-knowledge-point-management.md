@@ -6,11 +6,12 @@
 | --- | --- |
 | Feature ID | F-003 |
 | Feature 名称 | 知识点管理业务层与 REST API |
-| 状态 | Active（实现、自动化测试与手工验证已完成，待 Git 收尾） |
+| 状态 | Completed |
 | 计划日期 | 2026-08-31 |
+| 完成日期 | 2026-09-01 |
 | 目标分支 | `feature/F-003-knowledge-point-management` |
 | 前置 Feature | F-001、F-002 |
-| 目标目录 | `docs/plans/active/F-003-knowledge-point-management.md` |
+| 目标目录 | `docs/plans/completed/F-003-knowledge-point-management.md` |
 
 ---
 
@@ -1315,10 +1316,10 @@ docs/plans/completed/F-003-knowledge-point-management.md
 - [x] 更新 `project-status.md`。
 - [x] 更新本 Feature Plan 状态。
 - [x] 再次执行全量测试。
-- [ ] 检查 `git diff` 和 `git status`。
-- [ ] 提交 F-003 代码与文档。
-- [ ] 推送功能分支。
-- [ ] 完成后将 Plan 移入 `plans/completed`。
+- [x] 检查 `git diff` 和 `git status`。
+- [x] 提交 F-003 代码与文档。
+- [x] 推送功能分支。
+- [x] 完成后将 Plan 移入 `plans/completed`。
 
 ---
 
@@ -1380,10 +1381,10 @@ docs/plans/completed/F-003-knowledge-point-management.md
 
 ### 23.6 Git 验收
 
-- [ ] 所有 F-003 相关代码和文档已提交。
-- [ ] 最终工作区干净。
-- [ ] 功能分支已推送。
-- [ ] 实现、测试结果和文档状态一致。
+- [x] 所有 F-003 相关代码和文档已提交。
+- [x] 最终工作区干净。
+- [x] 功能分支已推送。
+- [x] 实现、测试结果和文档状态一致。
 
 ---
 
