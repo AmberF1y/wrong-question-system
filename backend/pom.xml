@@ -32,6 +32,13 @@
         </dependency>
 
 
+        <!-- Validation：校验Controller接收的请求字段 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+
         <!-- Spring测试：JUnit、MockMvc等 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

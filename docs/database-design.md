@@ -7,12 +7,12 @@ v1.0 MVP
 当前阶段：
 
 ```text
-F-002 数据库设计
+F-003 知识点管理业务层与 REST API
 ```
 
 状态：
 
-> 数据库逻辑设计已确认，待编写建表 SQL 并建立 Spring Data JPA 映射。
+> F-002 已完成建表 SQL、Spring Data JPA Entity、Repository 与真实 MySQL 集成测试。F-003 不修改表结构，在现有结构上增加业务校验和 REST API。
 
 ---
 
@@ -628,6 +628,53 @@ TCP
 
 ---
 
+## 8.4 名称长度
+
+- `knowledge_point.name` 数据库字段最多保存 100 个字符。
+- 根节点在业务上最多 50 个字符。
+- 普通节点在业务上最多 100 个字符。
+
+根节点同时承担科目名称作用，需要能够同步到 `question.subject VARCHAR(50)`，因此根节点使用更严格的 50 字符限制。该规则由 Service 校验。
+
+---
+
+## 8.5 知识树归属
+
+- 根节点代表一棵知识树和一个科目边界。
+- 普通节点只允许在同一根节点内部移动。
+- 禁止跨根节点移动。
+- 根节点不能变成其他节点的子节点。
+- 普通节点不能升级为根节点。
+
+这些规则依赖当前树结构，由 Service 校验，不增加额外数据库字段。
+
+---
+
+## 8.6 根节点改名
+
+允许根节点改名。改名时必须在同一事务中更新 `knowledge_point.name` 和相关 `question.subject`，任意一步失败时全部回滚。
+
+---
+
+## 8.7 名称清理与唯一性
+
+- 保存前去除名称首尾空格。
+- 不删除或合并内部空格。
+- 根节点之间不能重名。
+- 同一父节点下不能重名。
+- 不同父节点下允许同名。
+- `utf8mb4_unicode_ci` 下英文大小写不区分。
+
+数据库联合唯一约束保护普通同级节点；根节点的 `parent_id` 为 `NULL`，MySQL 联合唯一约束不能阻止多个同名根节点，因此根节点重名必须由 Service 额外检查。
+
+---
+
+## 8.8 查询与排序
+
+F-003 一次查询全部知识点，并在 Java 中以 O(n) 方式组装完整知识树。根节点和同级节点均按 ID 升序排列，不增加手工排序字段。
+
+---
+
 # 9. 同级知识点名称唯一
 
 当前业务规则：
@@ -1167,6 +1214,8 @@ ON DELETE RESTRICT
 
 之后再删除。
 
+F-003 的删除 API 不自动执行迁移或解除关联。存在任何错题引用时直接返回业务冲突，由数据库 `ON DELETE RESTRICT` 继续兜底。
+
 ---
 
 ## 16.3 存在子知识点时禁止删除
@@ -1306,23 +1355,11 @@ updated_time
 
 二者均不能为空。
 
-具体由：
+时间字段已经确定由 MySQL 维护：
 
-```text
-数据库默认时间
-```
-
-还是：
-
-```text
-Spring Data JPA
-```
-
-负责自动维护，将在 SQL 初始化和 JPA Entity 映射阶段统一确定。
-
-当前数据库逻辑模型只规定：
-
-> 创建时间和更新时间必须可靠存在并保持正确。
+- `created_time` 使用 `DEFAULT CURRENT_TIMESTAMP`。
+- `updated_time` 使用 `DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`。
+- JPA Entity 通过 `insertable = false`、`updatable = false` 读取时间，不主动写入。
 
 ---
 
@@ -1722,25 +1759,11 @@ AI解析数据
 
 ---
 
-# 29. F-002 下一步
+# 29. 当前实现状态
 
-数据库逻辑设计确认后，按以下顺序继续：
+F-002 已完成 `sql/init.sql`、三张数据库表及约束、Question/KnowledgePoint Entity、Repository、Hibernate `ddl-auto: validate` 和真实 MySQL Repository 集成测试。
 
-```text
-1. 根据本文件编写建表 SQL
-↓
-2. 在 wrong_question_system 中创建数据表
-↓
-3. 使用 Navicat 验证表结构、主键、外键和索引
-↓
-4. 创建 Spring Data JPA Entity
-↓
-5. 创建数据访问层
-↓
-6. 验证 Spring Boot 可以正常读写数据库
-↓
-7. 更新 project-status.md
-```
+F-003 在现有表结构上实现知识点 Service、事务、REST API 和严格业务校验，不新增或修改数据库表。
 
 本文件作为当前数据库结构设计的主要依据。
 

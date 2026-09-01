@@ -6,7 +6,7 @@
 | --- | --- |
 | Feature ID | F-003 |
 | Feature 名称 | 知识点管理业务层与 REST API |
-| 状态 | Planned（范围已确认，尚未开始实现） |
+| 状态 | Active（实现、自动化测试与手工验证已完成，待 Git 收尾） |
 | 计划日期 | 2026-08-31 |
 | 目标分支 | `feature/F-003-knowledge-point-management` |
 | 前置 Feature | F-001、F-002 |
@@ -84,22 +84,15 @@ F-001 和 F-002 已完成，当前已经具备：
 
 这些问题不是 F-003 的业务目标，但需要在 F-003 文档工作中修正。
 
-### 5.1 ADR-001 与真实代码冲突
+### 5.1 ADR-001 与真实代码一致
 
-ADR-001 仍记录：
+上传后的真实仓库显示，ADR-001 已经明确记录：
 
-- MyBatis。
-- MyBatis-Plus。
-- Flyway。
+- 使用 Spring Data JPA。
+- 不引入 MyBatis、MyBatis-Plus。
+- 数据库迁移工具暂未确定。
 
-真实项目已经使用：
-
-- Spring Data JPA。
-- Hibernate。
-- `sql/init.sql` 管理当前数据库结构。
-- 尚未引入 Flyway。
-
-因此需要新增 ADR-002，明确替代 ADR-001 中的数据访问和数据库版本管理决定。ADR-001 保留作为历史记录，不直接覆盖原文。
+这些决定与当前代码一致，因此 F-003 不新增其他 ADR，也不重复记录已经存在的技术决策。
 
 ### 5.2 database-design.md 状态过期
 
@@ -190,7 +183,6 @@ F-003 知识点管理业务与 API
 - 统一 Exception Handler。
 - Service 单元测试。
 - Controller 真实 MySQL 集成测试。
-- ADR-002。
 - API、数据库设计和项目状态文档同步。
 
 ### 8.2 不包含范围
@@ -1164,25 +1156,44 @@ BUILD SUCCESS
 
 手工验证可使用 Postman、IDEA HTTP Client 或其他 HTTP 客户端，不限定具体工具。
 
+### 20.1 实际验证结果
+
+2026-09-01 已在用户本地 Java 21.0.12 与 MySQL 9.6 环境完成验证。
+
+自动化测试结果：
+
+```text
+Tests run: 36, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+其中：
+
+- `KnowledgePointServiceTest`：21 个测试；
+- `KnowledgePointControllerTest`：11 个真实 MySQL 集成测试；
+- 原有应用、Repository 和健康检查测试：4 个；
+- Controller 测试数据通过事务回滚。
+
+手工验证已经覆盖：
+
+- 创建根节点和子节点；
+- 查询嵌套知识树；
+- 修改名称并在同一知识树内移动；
+- 根节点及同级重名；
+- 跨根节点移动；
+- 删除存在子节点的知识点；
+- 删除被错题引用的知识点；
+- 根节点改名同步 `question.subject`；
+- 删除成功返回 `200 OK` 和 JSON 消息；
+- 清理全部临时验证数据。
+
 ---
 
 ## 21. 文档变更计划
 
-### 21.1 新增 ADR-002
+### 21.1 ADR 处理
 
-建议文件：
-
-```text
-docs/decisions/ADR-002-use-spring-data-jpa.md
-```
-
-至少记录：
-
-- 项目实际采用 Spring Data JPA + Hibernate。
-- 替代 ADR-001 中的 MyBatis 与 MyBatis-Plus 决定。
-- 当前未采用 Flyway。
-- 当前数据库结构仍以 `database-design.md`、`sql/init.sql` 和真实 MySQL 为准。
-- 未来数据库结构演进变复杂时再评估迁移工具。
+ADR-001 已与真实代码一致，F-003 不新增或修改 ADR。
 
 ### 21.2 更新 database-design.md
 
@@ -1234,75 +1245,76 @@ docs/plans/completed/F-003-knowledge-point-management.md
 
 ### 阶段 0：开发前检查
 
-- [ ] 检查 `git status`。
-- [ ] 确认工作区无意外改动。
-- [ ] 确认或切换到 `feature/F-003-knowledge-point-management`。
-- [ ] 确认 MySQL 服务和 `DB_PASSWORD` 可用。
+- [x] 检查 `git status`。
+- [x] 确认实现前工作区无意外改动。
+- [x] 确认处于 `feature/F-003-knowledge-point-management`。
+- [x] 确认 MySQL 服务和 `DB_PASSWORD` 可用。
 
-### 阶段 1：修正技术决策记录
+### 阶段 1：核对技术决策记录
 
-- [ ] 新增 ADR-002。
-- [ ] 明确 JPA/Hibernate 为当前真实数据访问方案。
+- [x] 确认 ADR-001 已与 JPA/Hibernate 真实实现一致。
+- [x] 确认 F-003 不需要新增 ADR。
 
 ### 阶段 2：准备依赖与数据访问查询
 
-- [ ] 添加 `spring-boot-starter-validation`。
-- [ ] 为 `KnowledgePointRepository` 增加必要查询。
-- [ ] 为 `QuestionRepository` 增加必要查询。
+- [x] 添加 `spring-boot-starter-validation`。
+- [x] 为 `KnowledgePointRepository` 增加必要查询。
+- [x] 为 `QuestionRepository` 增加必要查询。
 
 ### 阶段 3：建立 DTO 与异常响应
 
-- [ ] 创建请求 DTO。
-- [ ] 创建普通响应 DTO。
-- [ ] 创建知识树响应 DTO。
-- [ ] 创建删除成功响应 DTO。
-- [ ] 创建统一错误响应 DTO。
-- [ ] 创建知识点业务异常。
-- [ ] 创建全局 Exception Handler。
+- [x] 创建请求 DTO。
+- [x] 创建普通响应 DTO。
+- [x] 创建知识树响应 DTO。
+- [x] 创建删除成功响应 DTO。
+- [x] 创建统一错误响应 DTO。
+- [x] 创建知识点业务异常。
+- [x] 创建全局 Exception Handler。
 
 ### 阶段 4：实现 Service
 
-- [ ] 实现名称清理和长度规则。
-- [ ] 实现根节点与同级重名检查。
-- [ ] 实现创建逻辑。
-- [ ] 实现同树移动检查。
-- [ ] 实现自引用和循环检查。
-- [ ] 实现根节点移动限制。
-- [ ] 实现根节点改名和 `subject` 同步。
-- [ ] 实现严格删除检查。
-- [ ] 实现 O(n) 知识树组装。
-- [ ] 添加正确事务边界。
+- [x] 实现名称清理和长度规则。
+- [x] 实现根节点与同级重名检查。
+- [x] 实现创建逻辑。
+- [x] 实现同树移动检查。
+- [x] 实现自引用和循环检查。
+- [x] 实现根节点移动限制。
+- [x] 实现根节点改名和 `subject` 同步。
+- [x] 实现严格删除检查。
+- [x] 实现 O(n) 知识树组装。
+- [x] 添加正确事务边界。
 
 ### 阶段 5：实现 Controller
 
-- [ ] 实现 `GET /api/knowledge-points/tree`。
-- [ ] 实现 `POST /api/knowledge-points`。
-- [ ] 实现 `PUT /api/knowledge-points/{id}`。
-- [ ] 实现 `DELETE /api/knowledge-points/{id}`。
-- [ ] 确认状态码和响应 DTO。
+- [x] 实现 `GET /api/knowledge-points/tree`。
+- [x] 实现 `POST /api/knowledge-points`。
+- [x] 实现 `PUT /api/knowledge-points/{id}`。
+- [x] 实现 `DELETE /api/knowledge-points/{id}`。
+- [x] 按计划设置状态码和响应 DTO。
 
 ### 阶段 6：自动化测试
 
-- [ ] 完成 Service 单元测试。
-- [ ] 完成 Controller 真实 MySQL 集成测试。
-- [ ] 执行全量 Maven 测试。
-- [ ] 修复所有失败和错误。
+- [x] 编写 Service 单元测试。
+- [x] 编写 Controller 真实 MySQL 集成测试。
+- [x] 在本地执行并确认新增测试通过。
+- [x] 执行全量 Maven 测试。
+- [x] 确认所有测试无失败和错误。
 
 ### 阶段 7：手工验证
 
-- [ ] 启动后端。
-- [ ] 走通四个知识点 API。
-- [ ] 验证主要失败场景。
-- [ ] 验证根节点改名事务。
-- [ ] 清理临时验证数据。
+- [x] 启动后端。
+- [x] 走通四个知识点 API。
+- [x] 验证主要失败场景。
+- [x] 验证根节点改名事务。
+- [x] 清理临时验证数据。
 
 ### 阶段 8：文档与 Git 收尾
 
-- [ ] 更新 `api-design.md`。
-- [ ] 更新 `database-design.md`。
-- [ ] 更新 `project-status.md`。
-- [ ] 更新本 Feature Plan 状态。
-- [ ] 再次执行全量测试。
+- [x] 更新 `api-design.md`。
+- [x] 更新 `database-design.md`。
+- [x] 更新 `project-status.md`。
+- [x] 更新本 Feature Plan 状态。
+- [x] 再次执行全量测试。
 - [ ] 检查 `git diff` 和 `git status`。
 - [ ] 提交 F-003 代码与文档。
 - [ ] 推送功能分支。
@@ -1314,57 +1326,57 @@ docs/plans/completed/F-003-knowledge-point-management.md
 
 ### 23.1 功能验收
 
-- [ ] 四个知识点接口均可正常调用。
-- [ ] 查询接口返回正确的嵌套树。
-- [ ] 创建根节点和子节点成功。
-- [ ] 名称清理、长度和重名规则生效。
-- [ ] 同一知识树内移动成功。
-- [ ] 自引用和循环引用被拒绝。
-- [ ] 跨根节点移动被拒绝。
-- [ ] 根节点不能变成子节点。
-- [ ] 普通节点不能升级为根节点。
-- [ ] 根节点改名同步相关错题 `subject`。
-- [ ] 严格删除规则生效。
-- [ ] 删除成功返回 200 和 JSON 成功消息。
+- [x] 四个知识点接口均可正常调用。
+- [x] 查询接口返回正确的嵌套树。
+- [x] 创建根节点和子节点成功。
+- [x] 名称清理、长度和重名规则生效。
+- [x] 同一知识树内移动成功。
+- [x] 自引用和循环引用被拒绝。
+- [x] 跨根节点移动被拒绝。
+- [x] 根节点不能变成子节点。
+- [x] 普通节点不能升级为根节点。
+- [x] 根节点改名同步相关错题 `subject`。
+- [x] 严格删除规则生效。
+- [x] 删除成功返回 200 和 JSON 成功消息。
 
 ### 23.2 API 验收
 
-- [ ] 创建返回 201。
-- [ ] 查询返回 200。
-- [ ] 修改返回 200。
-- [ ] 删除返回 200。
-- [ ] Validation 失败返回 400。
-- [ ] 目标不存在返回 404。
-- [ ] 业务冲突返回 409。
-- [ ] 错误响应字段与本计划一致。
-- [ ] Controller 不直接返回 Entity。
+- [x] 创建返回 201。
+- [x] 查询返回 200。
+- [x] 修改返回 200。
+- [x] 删除返回 200。
+- [x] Validation 失败返回 400。
+- [x] 目标不存在返回 404。
+- [x] 业务冲突返回 409。
+- [x] 错误响应字段与本计划一致。
+- [x] Controller 不直接返回 Entity。
 
 ### 23.3 代码验收
 
-- [ ] Controller 不直接调用 Repository。
-- [ ] Validation 只负责通用格式校验。
-- [ ] Service 统一负责业务规则。
-- [ ] 写操作具有明确事务边界。
-- [ ] 根节点改名与错题 `subject` 更新在同一事务。
-- [ ] 不存在没有真实用途的 Service 接口或 Mapper 框架。
-- [ ] 不修改数据库表结构。
-- [ ] 项目可以正常编译和启动。
+- [x] Controller 不直接调用 Repository。
+- [x] Validation 只负责通用格式校验。
+- [x] Service 统一负责业务规则。
+- [x] 写操作具有明确事务边界。
+- [x] 根节点改名与错题 `subject` 更新在同一事务。
+- [x] 不存在没有真实用途的 Service 接口或 Mapper 框架。
+- [x] 不修改数据库表结构。
+- [x] 项目可以正常编译和启动。
 
 ### 23.4 测试验收
 
-- [ ] Service 单元测试覆盖约定业务分支。
-- [ ] Controller 真实 MySQL 集成测试覆盖代表性链路。
-- [ ] 原有测试继续通过。
-- [ ] `\.\mvnw test` 输出 `BUILD SUCCESS`。
-- [ ] 测试数据通过事务回滚。
+- [x] Service 单元测试覆盖约定业务分支。
+- [x] Controller 真实 MySQL 集成测试覆盖代表性链路。
+- [x] 原有测试继续通过。
+- [x] `.\mvnw.cmd test` 输出 `BUILD SUCCESS`。
+- [x] 测试数据通过事务回滚。
 
 ### 23.5 文档验收
 
-- [ ] ADR-002 已新增。
-- [ ] `database-design.md` 过期内容已修正。
-- [ ] 知识点 API 已记录。
-- [ ] `project-status.md` 与真实代码一致。
-- [ ] 本 Feature Plan 的状态和任务清单已同步。
+- [x] 已确认 ADR-001 与真实代码一致，无需新增 ADR。
+- [x] `database-design.md` 过期内容已修正。
+- [x] 知识点 API 已记录。
+- [x] `project-status.md` 与当前实现状态一致。
+- [x] 本 Feature Plan 的状态和任务清单已同步。
 
 ### 23.6 Git 验收
 
@@ -1444,7 +1456,7 @@ F-003 不增加分布式锁或复杂并发控制。
 | 数据库表变更 | 无 |
 | 测试 | Service 单元测试 + Controller 真实 MySQL 集成测试 |
 | 手工验证 | 必须 |
-| ADR | 新增 ADR-002 |
+| ADR | ADR-001 已与真实实现一致，不新增 ADR |
 
 ---
 
@@ -1459,7 +1471,7 @@ F-003 只有在以下条件全部满足后才能标记为 Completed：
 5. 原有测试未被破坏。
 6. 全量 Maven 测试为 `BUILD SUCCESS`。
 7. 手工 API 验证完成并清理临时数据。
-8. ADR-002、API、数据库设计和项目状态文档已同步。
+8. API、数据库设计和项目状态文档已同步。
 9. 代码、测试结果和文档一致。
 10. Git 工作区干净，功能分支已推送。
 11. Feature Plan 已从 `plans/active` 移入 `plans/completed`。
