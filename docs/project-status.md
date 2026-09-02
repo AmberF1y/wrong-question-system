@@ -15,29 +15,28 @@
 | F-001 | Completed | Spring Boot 项目初始化与健康检查 |
 | F-002 | Completed | 数据库设计、JPA Entity、Repository 与真实 MySQL 集成测试 |
 | F-003 | Completed | 知识点管理业务层、REST API、异常响应与测试 |
-| F-004 | Active（实现与验证完成，待 Git 收尾） | 错题基础管理业务层、REST API、异常响应与测试 |
+| F-004 | Completed | 错题基础管理业务层、REST API、异常响应与测试 |
 
 当前开发分支：
 
 ```text
-feature/F-004-question-management
+main
 ```
 
-F-003 已通过 Pull Request #3 使用 Merge Commit 合并到 `main`：
+F-004 已通过 Pull Request #4 使用 Merge Commit 合并到 `main`：
 
 ```text
-2106fc3 Merge pull request #3 from AmberF1y/feature/F-003-knowledge-point-management
+ce54aad Merge pull request #4 from AmberF1y/feature/F-004-question-management
 ```
 
-F-001、F-002、F-003 的本地和远程功能分支均已在合并并验证后删除。
-
-F-004 从上述最新 `main` 创建，正式计划提交为：
+F-004 的计划与实现提交为：
 
 ```text
 bb22c98 docs: add F-004 question management plan
+d220806 feat: implement F-004 question management
 ```
 
-该提交已经推送到 `origin/feature/F-004-question-management`。F-004 的实现、自动化测试和手工验证已经完成，当前尚未提交实现改动，也尚未合并到 `main`。
+合并后的 `main` 已重新通过全部 65 个测试，工作区 clean。F-001、F-002、F-003、F-004 的本地和远程功能分支均已在合并并验证后删除。
 
 ---
 
@@ -205,7 +204,7 @@ MySQL
 
 ## 10. 自动化测试结果
 
-2026-09-02 在 `feature/F-004-question-management` 上完成 F-004 全量测试：
+2026-09-02 先在 `feature/F-004-question-management` 上完成 F-004 全量测试，再在合并提交 `ce54aad` 对应的 `main` 上重新执行相同测试。两次结果一致：
 
 - Java 21.0.12；
 - MySQL 9.6；
@@ -294,7 +293,7 @@ Windows PowerShell 5.1 对 JSON UTF-8 的显示出现乱码和单元素数组包
 
 ---
 
-## 13. F-004 当前范围
+## 13. F-004 完成范围
 
 F-004 提供五个错题接口：
 
@@ -310,7 +309,7 @@ F-004 不包含图片上传、OCR、复习、复杂搜索或前端页面。
 
 ---
 
-## 14. F-004 已进入实现的业务规则
+## 14. F-004 业务规则
 
 - 请求不提交 `subject`，由所选知识点共同根节点名称生成；
 - 每道错题至少关联一个知识点；
@@ -326,9 +325,9 @@ F-004 不包含图片上传、OCR、复习、复杂搜索或前端页面。
 
 ---
 
-## 15. F-004 当前代码状态
+## 15. F-004 完成状态
 
-当前功能分支工作区已经包含：
+合并到 `main` 的 F-004 代码包含：
 
 - Question 请求、详情、摘要和分页 DTO；
 - QuestionController；
@@ -341,11 +340,11 @@ F-004 不包含图片上传、OCR、复习、复杂搜索或前端页面。
 - QuestionService Mockito 单元测试；
 - QuestionController 真实 MySQL 集成测试。
 
-上述代码已在用户本地 Java 21.0.12 + MySQL 9.6 环境完成编译、全量测试和手工验证。当前还未提交实现改动，因此 F-004 仍未进入 `main`。
+上述代码由实现提交 `d220806` 引入，并通过 Pull Request #4 合并到 `main`。功能分支和合并后的 `main` 均已在用户本地 Java 21.0.12 + MySQL 9.6 环境完成编译与全量测试。
 
 ---
 
-## 16. F-004 验证状态
+## 16. F-004 验证与 Git 状态
 
 已完成：
 
@@ -357,20 +356,17 @@ F-004 不包含图片上传、OCR、复习、复杂搜索或前端页面。
 - Navicat 最终数据核对通过；
 - 手工临时数据全部清理；
 - API、数据库设计和项目状态文档已同步；
-- Feature Plan 已归档到 `docs/plans/completed/`。
-
-待完成：
-
-- 检查 diff，提交并推送 F-004 实现；
-- 通过 Pull Request 合并到 `main`；
-- 在合并后的 `main` 再次执行 65 个测试；
-- 删除本地和远程 F-004 功能分支；
-- 同步最终 Git 状态。
+- Feature Plan 已归档到 `docs/plans/completed/`；
+- 计划提交 `bb22c98` 和实现提交 `d220806` 已推送；
+- Pull Request #4 已使用 Merge Commit 合并，合并提交为 `ce54aad`；
+- 合并后的 `main` 已再次通过全部 65 个测试；
+- `main` 工作区 clean 并与 `origin/main` 同步；
+- 本地和远程 `feature/F-004-question-management` 分支均已删除。
 
 ---
 
 ## 17. 当前客观状态
 
-F-001、F-002、F-003 已进入 `main`。F-004 的代码、65 个自动化测试、手工 API 验证和数据库清理均已完成。
+F-001、F-002、F-003、F-004 均已进入 `main`。F-004 的实现、65 个自动化测试、手工 API 验证、数据库清理、Pull Request 合并和功能分支清理均已完成。
 
-F-004 当前仍位于未提交的功能分支工作区，尚未进入 `main`。下一步是检查 diff、提交并推送，然后创建 Pull Request。
+当前分支为 `main`，与 `origin/main` 同步，工作区 clean；当前没有处于 Active 状态的 Feature。

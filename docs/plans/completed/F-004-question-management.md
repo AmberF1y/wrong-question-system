@@ -6,14 +6,17 @@
 | --- | --- |
 | Feature ID | F-004 |
 | Feature 名称 | 错题基础管理业务层与 REST API |
-| 状态 | Implemented and verified（功能实现与验证完成，待 PR 与 main 收尾） |
+| 状态 | Completed |
 | 规划基线 | `main`，合并提交 `2106fc3` |
-| 计划分支 | `feature/F-004-question-management` |
+| 计划分支 | `feature/F-004-question-management`（已删除） |
+| 实现提交 | `d220806` |
+| Pull Request | #4 |
+| 合并提交 | `ce54aad` |
 | 完成日期 | 2026-09-02 |
 | 计划文件 | `docs/plans/completed/F-004-question-management.md` |
 | 前置 Feature | F-001、F-002、F-003 均已完成并合并到 `main` |
 
-> 本计划生成时尚未创建 Git 分支或编写实现代码；本文件归档时，功能实现、自动化测试和手工验证已经完成，PR 与 main 收尾状态仍由任务清单和项目状态文档单独记录。
+> 本计划生成时尚未创建 Git 分支或编写实现代码；截至完成归档，功能实现、自动化测试、手工验证、Pull Request 合并、main 回归和功能分支清理均已完成。
 
 ---
 
@@ -1237,19 +1240,19 @@ docs/plans/completed/F-004-question-management.md
 - [x] 更新本计划任务状态；
 - [x] 将本计划移至 completed；
 - [x] 再次执行全量测试；
-- [ ] 检查 diff 和 status；
-- [ ] 提交并推送功能分支。
+- [x] 检查 diff 和 status；
+- [x] 提交并推送功能分支。
 
 ### 阶段 9：PR 与 main 收尾
 
-- [ ] 创建 F-004 → main Pull Request；
-- [ ] 确认 PR 只包含 F-004；
-- [ ] 使用 Create a merge commit；
-- [ ] 拉取最新 main；
-- [ ] 在 main 上重新执行全量测试；
-- [ ] 确认 main 工作区 clean；
-- [ ] 删除本地和远程 F-004 分支；
-- [ ] 确认 project-status.md 最终 Git 状态准确。
+- [x] 创建 F-004 → main Pull Request；
+- [x] 确认 PR 只包含 F-004；
+- [x] 使用 Create a merge commit；
+- [x] 拉取最新 main；
+- [x] 在 main 上重新执行全量测试；
+- [x] 确认 main 工作区 clean；
+- [x] 删除本地和远程 F-004 分支；
+- [x] 确认 project-status.md 最终 Git 状态准确。
 
 ---
 
@@ -1318,12 +1321,12 @@ docs/plans/completed/F-004-question-management.md
 ### 29.6 Git 验收
 
 - [x] F-004 分支从最新 main 创建；
-- [ ] PR 只包含 F-004；
-- [ ] 使用 Merge Commit 合并；
-- [ ] F-004 已进入 main；
-- [ ] 合并后 main 测试通过；
-- [ ] main 工作区 clean；
-- [ ] 本地和远程 F-004 分支已删除。
+- [x] PR 只包含 F-004；
+- [x] 使用 Merge Commit 合并；
+- [x] F-004 已进入 main；
+- [x] 合并后 main 测试通过；
+- [x] main 工作区 clean；
+- [x] 本地和远程 F-004 分支已删除。
 
 ---
 
@@ -1438,6 +1441,17 @@ BUILD SUCCESS
 
 本阶段没有修改数据库表结构，没有增加 Maven 依赖或 ADR。
 
+Git 收尾结果：
+
+- 计划提交：`bb22c98`；
+- 实现提交：`d220806`；
+- Pull Request：#4；
+- 合并方式：Merge Commit；
+- `main` 合并提交：`ce54aad`；
+- 合并后的 `main` 再次执行全量测试，65 个测试全部通过；
+- `main` 工作区 clean 并与 `origin/main` 同步；
+- 本地和远程 F-004 功能分支均已删除。
+
 ---
 
 ## 33. 完成定义
@@ -1460,6 +1474,6 @@ F-004 的仓库级收尾需要满足以下条件：
 14. 本地和远程 F-004 功能分支已删除；
 15. project-status.md 不再遗留过期功能分支状态。
 
-第 1～10 项已经完成。第 11～15 项属于 PR 与 `main` 收尾，在本计划归档后继续执行；这些步骤完成前，`project-status.md` 中 F-004 仍保持 Active。
+第 1～15 项均已完成，F-004 的功能实现、验证和仓库级收尾全部结束。
 
 当前没有未确认的 F-004 范围、业务规则、技术方案、测试范围或完成标准。
