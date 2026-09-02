@@ -2,6 +2,7 @@
 
 * **状态：** 已接受（Accepted）
 * **日期：** 2026-08-21
+* **最后修正：** 2026-08-23
 
 ## 1. 背景
 
@@ -43,15 +44,16 @@
 采用：
 
 * MySQL
-* MyBatis
-* MyBatis-Plus
-* Flyway
+* Spring Data JPA
 
 简单理解：
 
-* **MySQL**：保存错题、知识点、复习记录等数据。
-* **MyBatis / MyBatis-Plus**：帮助 Java 程序访问 MySQL。
-* **Flyway**：记录数据库表结构的变化，让数据库结构也可以跟随 Git 管理。
+* **MySQL**：保存错题、知识点、复习相关数据。
+* **Spring Data JPA**：负责 Java 对象与数据库表之间的映射，并帮助后端完成常见的数据库操作。
+
+当前阶段不引入 MyBatis、MyBatis-Plus。
+
+数据库结构变更管理工具暂未正式确定，后续在实际出现数据库版本迁移需求时再单独决策。
 
 ### 前端
 
@@ -86,7 +88,7 @@ HTTP / REST API / JSON
   ↓
 Spring Boot 后端
   ↓
-MyBatis / MyBatis-Plus
+Spring Data JPA
   ↓
 MySQL
 ```
@@ -102,7 +104,7 @@ Vue 收集填写的数据
 ↓
 Spring Boot 处理业务
 ↓
-通过 MyBatis 操作 MySQL
+通过 Spring Data JPA 操作 MySQL
 ↓
 数据保存完成
 ```
@@ -165,8 +167,6 @@ ocr
 
 > **模块化单体（Modular Monolith）**
 
-目前只需要理解到这里。
-
 ---
 
 ## 5. 图片如何保存
@@ -177,7 +177,11 @@ ocr
 
 暂时不把图片文件本身直接保存进 MySQL。
 
-未来如果真的有需要，可以再考虑对象存储等其他方案。
+当前 MVP 阶段，错题表可以直接保存题目图片路径。
+
+如果以后出现一道题对应多张图片等真实需求，再考虑拆分独立的图片数据表。
+
+未来如果本地文件存储无法满足需求，可以再考虑对象存储等其他方案。
 
 ---
 
@@ -217,15 +221,13 @@ OCR 自动识别题目
 
 ## 7. 为什么选择这套方案
 
-当前选择这些技术，主要有以下几个原因。
-
 ### 能满足现在的需求
 
 当前系统主要需要：
 
 * 管理错题
 * 管理知识点
-* 保存复习记录
+* 保存复习相关数据
 * 安排每日复习
 * 做简单的数据统计
 * 保存题目图片
@@ -234,9 +236,18 @@ OCR 自动识别题目
 
 ### 技术成熟
 
-Java、Spring Boot、MySQL、Vue 等都有成熟的开发生态和大量学习资料。
+Java、Spring Boot、Spring Data JPA、MySQL、Vue 等都有成熟的开发生态和大量学习资料。
 
-### 适合项目长期发展
+### 与当前项目实现保持一致
+
+F-001 已经实际引入并使用：
+
+* Spring Data JPA
+* MySQL Connector
+
+因此第一版继续使用 Spring Data JPA，避免在没有真实需求的情况下更换数据访问技术。
+
+### 适合项目逐步发展
 
 项目未来还可能增加：
 
@@ -252,6 +263,8 @@ Java、Spring Boot、MySQL、Vue 等都有成熟的开发生态和大量学习�
 
 目前暂时不使用：
 
+* MyBatis
+* MyBatis-Plus
 * Redis
 * RabbitMQ
 * Kafka
@@ -275,12 +288,13 @@ Java、Spring Boot、MySQL、Vue 等都有成熟的开发生态和大量学习�
 
 * 系统不再只是单用户使用。
 * 数据量明显变大。
+* Spring Data JPA 已经明显不适合某些复杂数据库操作。
 * OCR 处理大量图片并且速度成为问题。
 * 本地保存图片已经无法满足需求。
 * 某个模块需要独立运行。
 * 当前技术方案已经明显影响开发或使用体验。
 
-如果以后做出了新的重要技术决定，应新增新的 ADR，而不是直接删除或修改过去的决策记录。
+如果以后做出了新的重要技术决定，应新增新的 ADR，而不是直接删除过去的决策记录。
 
 ---
 
@@ -293,12 +307,10 @@ Java、Spring Boot、MySQL、Vue 等都有成熟的开发生态和大量学习�
 Java 21
 Spring Boot
 Maven
+Spring Data JPA
 
 数据库：
 MySQL
-MyBatis
-MyBatis-Plus
-Flyway
 
 前端：
 Vue 3
@@ -312,6 +324,7 @@ Element Plus
 
 图片：
 本地文件存储
+数据库保存图片路径
 
 OCR：
 预留位置，第一版允许暂不实现
