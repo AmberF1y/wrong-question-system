@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -189,6 +190,29 @@ public class Question {
 
     public void removeKnowledgePoint(KnowledgePoint knowledgePoint) {
         this.knowledgePoints.remove(knowledgePoint);
+    }
+
+    public void replaceEditableFields(
+            String questionText,
+            String wrongAnswer,
+            String correctAnswer,
+            String analysis,
+            String errorReason,
+            String subject
+    ) {
+        this.questionText = questionText;
+        this.wrongAnswer = wrongAnswer;
+        this.correctAnswer = correctAnswer;
+        this.analysis = analysis;
+        this.errorReason = errorReason;
+        this.subject = subject;
+    }
+
+    public void replaceKnowledgePoints(
+            Collection<KnowledgePoint> knowledgePoints
+    ) {
+        this.knowledgePoints.clear();
+        this.knowledgePoints.addAll(knowledgePoints);
     }
 
     public LocalDateTime getCreatedTime() {

@@ -7,12 +7,12 @@ v1.0 MVP
 当前阶段：
 
 ```text
-F-003 知识点管理业务层与 REST API
+F-004 错题基础管理业务层与 REST API
 ```
 
 状态：
 
-> F-002 已完成建表 SQL、Spring Data JPA Entity、Repository 与真实 MySQL 集成测试。F-003 不修改表结构，在现有结构上增加业务校验和 REST API。
+> F-002 已完成建表 SQL、Spring Data JPA Entity、Repository 与真实 MySQL 集成测试。F-003 已完成知识点管理。F-004 不修改表结构，在现有结构上实现错题基础管理业务层与 REST API。
 
 ---
 
@@ -306,6 +306,8 @@ subject
 目前科目仅作为简单分类属性使用，还没有独立配置、复杂层级或其他需要单独建模的业务需求。
 
 如果后续真实需求发生变化，再重新评估是否将科目独立建模。
+
+F-004 请求不允许直接提交 `subject`。Service 根据所选知识点的共同根节点自动生成该字段，避免调用方同时提交两套可能互相矛盾的科目信息。
 
 ---
 
@@ -1071,6 +1073,16 @@ question.subject = 408
 
 该规则暂时由 Spring Boot 业务层校验。
 
+F-004 的具体处理为：
+
+1. 校验至少选择一个知识点；
+2. 批量加载全部直接选择的知识点；
+3. 分别向上查找各知识点的根节点；
+4. 根节点不一致时拒绝请求；
+5. 根节点一致时将根节点名称写入 `question.subject`。
+
+修改错题时允许整体替换为另一棵知识树中的知识点集合，因此可以切换科目，但一次请求中的知识点仍不能跨根节点混合。
+
 ---
 
 # 15. 每道错题至少关联一个知识点
@@ -1360,6 +1372,8 @@ updated_time
 - `created_time` 使用 `DEFAULT CURRENT_TIMESTAMP`。
 - `updated_time` 使用 `DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`。
 - JPA Entity 通过 `insertable = false`、`updatable = false` 读取时间，不主动写入。
+
+F-004 创建错题后会刷新持久化实体，以读取 MySQL 实际生成的时间。修改错题时会显式触发 `question.updated_time` 更新；即使只替换多对多关联而文本未变化，也能让修改时间反映本次业务操作。该处理不增加新字段或新时间管理框架。
 
 ---
 
@@ -1764,6 +1778,14 @@ AI解析数据
 F-002 已完成 `sql/init.sql`、三张数据库表及约束、Question/KnowledgePoint Entity、Repository、Hibernate `ddl-auto: validate` 和真实 MySQL Repository 集成测试。
 
 F-003 在现有表结构上实现知识点 Service、事务、REST API 和严格业务校验，不新增或修改数据库表。
+
+F-004 在同一结构上实现错题创建、详情、分页、修改和删除：
+
+- 创建和修改由 Service 保证核心文本、知识点集合与 `subject` 一致；
+- 分页先查询 `question.id`，再批量加载错题及知识点，避免多对多 fetch join 直接分页造成结果失真；
+- 删除 `question` 后由现有外键级联清理关联表，不删除知识点；
+- `spring.jpa.open-in-view=false`，响应映射所需关联必须在 Service 只读事务中明确加载；
+- 不修改 `sql/init.sql`、数据表、字段、索引或外键。
 
 本文件作为当前数据库结构设计的主要依据。
 

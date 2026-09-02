@@ -3,6 +3,8 @@ package com.wrongquestion.backend.common.exception;
 import com.wrongquestion.backend.knowledge.exception.KnowledgePointConflictException;
 import com.wrongquestion.backend.knowledge.exception.KnowledgePointNotFoundException;
 import com.wrongquestion.backend.knowledge.exception.KnowledgePointValidationException;
+import com.wrongquestion.backend.question.exception.QuestionNotFoundException;
+import com.wrongquestion.backend.question.exception.QuestionValidationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -11,6 +13,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -55,6 +58,20 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_FAILED",
+                "请求参数格式错误：" + exception.getName(),
+                request.getRequestURI(),
+                null
+        );
+    }
+
     @ExceptionHandler(KnowledgePointValidationException.class)
     public ResponseEntity<ApiErrorResponse> handleBusinessValidation(
             KnowledgePointValidationException exception,
@@ -77,6 +94,34 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.NOT_FOUND,
                 KnowledgePointNotFoundException.CODE,
+                exception.getMessage(),
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(QuestionNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleQuestionNotFound(
+            QuestionNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                QuestionNotFoundException.CODE,
+                exception.getMessage(),
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(QuestionValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handleQuestionValidation(
+            QuestionValidationException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                exception.getCode(),
                 exception.getMessage(),
                 request.getRequestURI(),
                 null

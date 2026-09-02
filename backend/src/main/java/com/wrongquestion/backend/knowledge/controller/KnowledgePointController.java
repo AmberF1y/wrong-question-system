@@ -1,9 +1,9 @@
 package com.wrongquestion.backend.knowledge.controller;
 
+import com.wrongquestion.backend.common.dto.MessageResponse;
 import com.wrongquestion.backend.knowledge.dto.CreateKnowledgePointRequest;
 import com.wrongquestion.backend.knowledge.dto.KnowledgePointResponse;
 import com.wrongquestion.backend.knowledge.dto.KnowledgePointTreeNodeResponse;
-import com.wrongquestion.backend.knowledge.dto.MessageResponse;
 import com.wrongquestion.backend.knowledge.dto.UpdateKnowledgePointRequest;
 import com.wrongquestion.backend.knowledge.service.KnowledgePointService;
 import jakarta.validation.Valid;

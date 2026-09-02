@@ -1,4 +1,4 @@
-package com.wrongquestion.backend.knowledge.dto;
+package com.wrongquestion.backend.common.dto;
 
 public record MessageResponse(String message) {
 }

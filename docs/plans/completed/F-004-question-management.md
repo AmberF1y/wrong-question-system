@@ -6,13 +6,14 @@
 | --- | --- |
 | Feature ID | F-004 |
 | Feature 名称 | 错题基础管理业务层与 REST API |
-| 状态 | Planned（范围已确认，尚未开始实现） |
+| 状态 | Implemented and verified（功能实现与验证完成，待 PR 与 main 收尾） |
 | 规划基线 | `main`，合并提交 `2106fc3` |
 | 计划分支 | `feature/F-004-question-management` |
-| 计划文件 | `docs/plans/active/F-004-question-management.md` |
+| 完成日期 | 2026-09-02 |
+| 计划文件 | `docs/plans/completed/F-004-question-management.md` |
 | 前置 Feature | F-001、F-002、F-003 均已完成并合并到 `main` |
 
-> 本计划生成时不创建 Git 分支，不编写实现代码。只有本计划确认并保存后，才创建 F-004 功能分支。
+> 本计划生成时尚未创建 Git 分支或编写实现代码；本文件归档时，功能实现、自动化测试和手工验证已经完成，PR 与 main 收尾状态仍由任务清单和项目状态文档单独记录。
 
 ---
 
@@ -1155,87 +1156,87 @@ docs/plans/completed/F-004-question-management.md
 
 ### 阶段 0：计划与 Git 基线
 
-- [ ] 将本计划保存到 `docs/plans/active/`；
-- [ ] 检查 `main` 与 `origin/main` 一致；
-- [ ] 检查工作区 clean；
-- [ ] 从最新 main 创建 `feature/F-004-question-management`；
-- [ ] 提交并推送正式计划。
+- [x] 将本计划保存到 `docs/plans/active/`；
+- [x] 检查 `main` 与 `origin/main` 一致；
+- [x] 检查工作区 clean；
+- [x] 从最新 main 创建 `feature/F-004-question-management`；
+- [x] 提交并推送正式计划。
 
 ### 阶段 1：公共结构与配置
 
-- [ ] 将 MessageResponse 移入公共 DTO 包；
-- [ ] 同步 KnowledgePointController 和 Service 引用；
-- [ ] 增加 Question 异常；
-- [ ] 扩展 GlobalExceptionHandler；
-- [ ] 设置 `open-in-view: false`；
-- [ ] 运行原有测试确认无回归。
+- [x] 将 MessageResponse 移入公共 DTO 包；
+- [x] 同步 KnowledgePointController 和 Service 引用；
+- [x] 增加 Question 异常；
+- [x] 扩展 GlobalExceptionHandler；
+- [x] 设置 `open-in-view: false`；
+- [x] 运行原有测试确认无回归。
 
 ### 阶段 2：DTO 与 Validation
 
-- [ ] 创建请求 DTO；
-- [ ] 创建详情 DTO；
-- [ ] 创建摘要 DTO；
-- [ ] 创建分页 DTO；
-- [ ] 实现文本和集合 Validation；
-- [ ] 实现分页参数 Validation。
+- [x] 创建请求 DTO；
+- [x] 创建详情 DTO；
+- [x] 创建摘要 DTO；
+- [x] 创建分页 DTO；
+- [x] 实现文本和集合 Validation；
+- [x] 实现分页参数 Validation。
 
 ### 阶段 3：Repository 与 Entity
 
-- [ ] 增加详情关联查询；
-- [ ] 增加分页 ID 查询；
-- [ ] 增加科目分页 ID 查询；
-- [ ] 增加批量关联加载；
-- [ ] 增加 Question 知识点整体替换方法；
-- [ ] 验证数据库时间字段刷新方案；
-- [ ] 验证关联单独变化时 updated_time 行为。
+- [x] 增加详情关联查询；
+- [x] 增加分页 ID 查询；
+- [x] 增加科目分页 ID 查询；
+- [x] 增加批量关联加载；
+- [x] 增加 Question 知识点整体替换方法；
+- [x] 验证数据库时间字段刷新方案；
+- [x] 验证关联单独变化时 updated_time 行为。
 
 ### 阶段 4：QuestionService
 
-- [ ] 实现文本标准化；
-- [ ] 实现知识点集合校验；
-- [ ] 实现共同根节点查找；
-- [ ] 实现 subject 自动生成；
-- [ ] 实现创建；
-- [ ] 实现详情；
-- [ ] 实现两步分页；
-- [ ] 实现科目筛选；
-- [ ] 实现完整修改；
-- [ ] 实现删除；
-- [ ] 实现 DTO 映射和稳定排序；
-- [ ] 添加事务边界。
+- [x] 实现文本标准化；
+- [x] 实现知识点集合校验；
+- [x] 实现共同根节点查找；
+- [x] 实现 subject 自动生成；
+- [x] 实现创建；
+- [x] 实现详情；
+- [x] 实现两步分页；
+- [x] 实现科目筛选；
+- [x] 实现完整修改；
+- [x] 实现删除；
+- [x] 实现 DTO 映射和稳定排序；
+- [x] 添加事务边界。
 
 ### 阶段 5：QuestionController
 
-- [ ] 实现 5 个 REST API；
-- [ ] 设置正确状态码；
-- [ ] Controller 只调用 Service；
-- [ ] 不直接返回 Entity。
+- [x] 实现 5 个 REST API；
+- [x] 设置正确状态码；
+- [x] Controller 只调用 Service；
+- [x] 不直接返回 Entity。
 
 ### 阶段 6：自动化测试
 
-- [ ] 编写 QuestionServiceTest；
-- [ ] 编写 QuestionControllerTest；
-- [ ] 必要时补充针对性 Repository 测试；
-- [ ] 执行全部测试；
-- [ ] 确认原有 36 个测试继续通过；
-- [ ] 确认新增测试全部通过。
+- [x] 编写 QuestionServiceTest；
+- [x] 编写 QuestionControllerTest；
+- [x] 评估后确认现有 Repository 测试与 Controller 集成测试已覆盖本阶段查询，无需重复新增测试类；
+- [x] 执行全部测试；
+- [x] 确认原有 36 个测试继续通过；
+- [x] 确认新增 29 个测试全部通过。
 
 ### 阶段 7：手工验证
 
-- [ ] 启动后端；
-- [ ] 执行完整成功链路；
-- [ ] 执行主要失败场景；
-- [ ] 使用 Navicat 验证关联和级联删除；
-- [ ] 清理临时数据。
+- [x] 启动后端；
+- [x] 执行完整成功链路；
+- [x] 执行主要失败场景；
+- [x] 使用 Navicat 验证关联和级联删除；
+- [x] 清理临时数据。
 
 ### 阶段 8：文档与功能分支收尾
 
-- [ ] 更新 api-design.md；
-- [ ] 更新 database-design.md；
-- [ ] 更新 project-status.md；
-- [ ] 更新本计划任务状态；
-- [ ] 将本计划移至 completed；
-- [ ] 再次执行全量测试；
+- [x] 更新 api-design.md；
+- [x] 更新 database-design.md；
+- [x] 更新 project-status.md；
+- [x] 更新本计划任务状态；
+- [x] 将本计划移至 completed；
+- [x] 再次执行全量测试；
 - [ ] 检查 diff 和 status；
 - [ ] 提交并推送功能分支。
 
@@ -1256,67 +1257,67 @@ docs/plans/completed/F-004-question-management.md
 
 ### 29.1 功能验收
 
-- [ ] 5 个错题 API 均可正常调用；
-- [ ] 创建支持一个或多个知识点；
-- [ ] subject 自动推导正确；
-- [ ] 跨科目混合知识点被拒绝；
-- [ ] 详情返回完整字段；
-- [ ] 列表分页正确；
-- [ ] 列表固定 ID 倒序；
-- [ ] 科目筛选正确；
-- [ ] 修改整体替换知识点；
-- [ ] 修改允许切换科目；
-- [ ] imagePath 在修改时保持不变；
-- [ ] 删除级联清理关联表；
-- [ ] 删除不影响知识点。
+- [x] 5 个错题 API 均可正常调用；
+- [x] 创建支持一个或多个知识点；
+- [x] subject 自动推导正确；
+- [x] 跨科目混合知识点被拒绝；
+- [x] 详情返回完整字段；
+- [x] 列表分页正确；
+- [x] 列表固定 ID 倒序；
+- [x] 科目筛选正确；
+- [x] 修改整体替换知识点；
+- [x] 修改允许切换科目；
+- [x] imagePath 在修改时保持不变；
+- [x] 删除级联清理关联表；
+- [x] 删除不影响知识点。
 
 ### 29.2 API 验收
 
-- [ ] POST 返回 201；
-- [ ] GET、PUT、DELETE 返回约定状态；
-- [ ] 请求和响应字段与计划一致；
-- [ ] Validation 失败返回 400；
-- [ ] Question 不存在返回 404；
-- [ ] KnowledgePoint 不存在返回 404；
-- [ ] 数据库完整性冲突返回 409；
-- [ ] 不直接返回 Entity；
-- [ ] 不增加通用成功包装层。
+- [x] POST 返回 201；
+- [x] GET、PUT、DELETE 返回约定状态；
+- [x] 请求和响应字段与计划一致；
+- [x] Validation 失败返回 400；
+- [x] Question 不存在返回 404；
+- [x] KnowledgePoint 不存在返回 404；
+- [x] 数据库完整性冲突统一映射为 409；
+- [x] 不直接返回 Entity；
+- [x] 不增加通用成功包装层。
 
 ### 29.3 代码验收
 
-- [ ] Controller 不直接调用 Repository；
-- [ ] Validation 与业务校验职责分离；
-- [ ] Service 负责业务与 DTO 映射；
-- [ ] 写操作有事务；
-- [ ] 查询使用只读事务；
-- [ ] 列表避免 N+1；
-- [ ] open-in-view 已关闭；
-- [ ] 不增加无真实用途的接口或框架；
-- [ ] 不修改数据库表结构；
-- [ ] 项目可以编译和启动。
+- [x] Controller 不直接调用 Repository；
+- [x] Validation 与业务校验职责分离；
+- [x] Service 负责业务与 DTO 映射；
+- [x] 写操作有事务；
+- [x] 查询使用只读事务；
+- [x] 列表避免 N+1；
+- [x] open-in-view 已关闭；
+- [x] 不增加无真实用途的接口或框架；
+- [x] 不修改数据库表结构；
+- [x] 项目可以编译和启动。
 
 ### 29.4 测试验收
 
-- [ ] Service 单元测试覆盖约定业务分支；
-- [ ] Controller 真实 MySQL 集成测试覆盖代表性链路；
-- [ ] 原有 36 个测试继续通过；
-- [ ] 新增测试全部通过；
-- [ ] Failures、Errors、Skipped 均为 0；
-- [ ] BUILD SUCCESS；
-- [ ] 手工 API 验证完成；
-- [ ] 临时数据全部清理。
+- [x] Service 单元测试覆盖约定业务分支；
+- [x] Controller 真实 MySQL 集成测试覆盖代表性链路；
+- [x] 原有 36 个测试继续通过；
+- [x] 新增 29 个测试全部通过；
+- [x] Failures、Errors、Skipped 均为 0；
+- [x] BUILD SUCCESS；
+- [x] 手工 API 验证完成；
+- [x] 临时数据全部清理。
 
 ### 29.5 文档验收
 
-- [ ] api-design.md 与实现一致；
-- [ ] database-design.md 与实现一致；
-- [ ] project-status.md 与真实 Git 和测试状态一致；
-- [ ] Completed Plan 保持历史语义；
-- [ ] 本计划完成后移入 completed。
+- [x] api-design.md 与实现一致；
+- [x] database-design.md 与实现一致；
+- [x] project-status.md 与真实 Git 和测试状态一致；
+- [x] Completed Plan 保持历史语义；
+- [x] 本计划完成后移入 completed。
 
 ### 29.6 Git 验收
 
-- [ ] F-004 分支从最新 main 创建；
+- [x] F-004 分支从最新 main 创建；
 - [ ] PR 只包含 F-004；
 - [ ] 使用 Merge Commit 合并；
 - [ ] F-004 已进入 main；
@@ -1402,9 +1403,46 @@ MySQL TEXT 不是无限长度。F-004 使用明确的应用层字符限制，优
 
 ---
 
-## 32. 完成定义
+## 32. 实施与验证结果
 
-F-004 只有在以下条件全部满足后才能标记为 Completed：
+2026-09-02 在 `feature/F-004-question-management` 上完成实现和验证。
+
+自动化测试环境与结果：
+
+```text
+Java 21.0.12
+MySQL 9.6
+Tests run: 65
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
+
+其中原有 36 个测试全部继续通过，新增：
+
+- `QuestionServiceTest`：21 个；
+- `QuestionControllerTest`：8 个；
+- 新增测试合计：29 个。
+
+手工验证完成：
+
+- 创建、详情、分页、科目筛选、完整修改和删除成功链路；
+- subject 自动推导、父子知识点共同选择和跨科目切换；
+- ID 倒序、列表摘要字段和超范围空页；
+- 重复知识点、跨科目知识点、参数校验、损坏 JSON 和资源不存在错误；
+- 非法创建不产生数据，非法更新保持原状态；
+- 删除错题清理关联但保留知识点；
+- 临时错题、关联和知识点全部清理；
+- Navicat 最终查询确认本次临时数据数量均为 0。
+
+本阶段没有修改数据库表结构，没有增加 Maven 依赖或 ADR。
+
+---
+
+## 33. 完成定义
+
+F-004 的仓库级收尾需要满足以下条件：
 
 1. 五个错题 API 全部实现；
 2. 所有已确认字段、知识点、subject、分页、修改和删除规则生效；
@@ -1421,5 +1459,7 @@ F-004 只有在以下条件全部满足后才能标记为 Completed：
 13. main 工作区 clean；
 14. 本地和远程 F-004 功能分支已删除；
 15. project-status.md 不再遗留过期功能分支状态。
+
+第 1～10 项已经完成。第 11～15 项属于 PR 与 `main` 收尾，在本计划归档后继续执行；这些步骤完成前，`project-status.md` 中 F-004 仍保持 Active。
 
 当前没有未确认的 F-004 范围、业务规则、技术方案、测试范围或完成标准。
