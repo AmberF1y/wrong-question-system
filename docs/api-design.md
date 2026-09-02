@@ -2,12 +2,12 @@
 
 ## 1. 文档状态
 
-- 当前版本：F-003
+- 当前版本：F-004
 - 基础路径：`/api`
 - 数据格式：JSON
-- 当前范围：健康检查与知识点管理
+- 当前范围：健康检查、知识点管理与错题基础管理
 
-本文件记录已经确认并进入实现的 API，不记录未开始的错题、复习、图片或 OCR 接口。
+本文件记录已经确认并进入实现的 API，不记录未开始的复习、图片上传或 OCR 接口。
 
 ---
 
@@ -229,3 +229,211 @@ F-003 不提供：
 - 图片上传；
 - OCR；
 - 复习与统计接口。
+
+---
+
+## 11. 创建错题
+
+### POST `/api/questions`
+
+请求不提交 `subject`、`imagePath`、ID 或时间字段：
+
+```json
+{
+  "questionText": "TCP 为什么需要拥塞控制？",
+  "wrongAnswer": "未作答",
+  "correctAnswer": "避免发送方使网络长期过载",
+  "analysis": "拥塞控制面向整个网络负载。",
+  "errorReason": "混淆了流量控制和拥塞控制",
+  "knowledgePointIds": [3, 4]
+}
+```
+
+成功状态：`201 Created`
+
+```json
+{
+  "id": 8,
+  "questionText": "TCP 为什么需要拥塞控制？",
+  "wrongAnswer": "未作答",
+  "correctAnswer": "避免发送方使网络长期过载",
+  "analysis": "拥塞控制面向整个网络负载。",
+  "errorReason": "混淆了流量控制和拥塞控制",
+  "subject": "408",
+  "imagePath": null,
+  "knowledgePoints": [
+    {
+      "id": 3,
+      "name": "TCP",
+      "parentId": 2
+    },
+    {
+      "id": 4,
+      "name": "拥塞控制",
+      "parentId": 3
+    }
+  ],
+  "createdTime": "2026-09-02T20:10:30",
+  "updatedTime": "2026-09-02T20:10:30"
+}
+```
+
+规则：
+
+- 五个文本字段均必填，并在保存前去除首尾空白；
+- 正文内部空格和换行保持不变；
+- 至少提交一个知识点 ID；
+- 知识点 ID 不能为 `null`、不能重复且必须存在；
+- 允许同时选择父知识点和子知识点；
+- 只保存直接选择的知识点，不自动保存祖先；
+- 所有知识点必须属于同一根节点；
+- `subject` 自动取共同根节点名称。
+
+---
+
+## 12. 查询错题详情
+
+### GET `/api/questions/{id}`
+
+成功状态：`200 OK`
+
+响应字段与创建成功响应相同，包括五个文本字段、只读 `imagePath`、直接关联知识点和时间字段。
+
+知识点按 ID 升序返回。错题不存在时返回：
+
+```text
+404 QUESTION_NOT_FOUND
+```
+
+---
+
+## 13. 分页查询错题
+
+### GET `/api/questions`
+
+请求示例：
+
+```http
+GET /api/questions?page=0&size=20&subject=408
+```
+
+参数：
+
+| 参数 | 必填 | 默认值 | 规则 |
+| --- | --- | ---: | --- |
+| `page` | 否 | 0 | 从 0 开始，不能小于 0 |
+| `size` | 否 | 20 | 1～100 |
+| `subject` | 否 | 无 | 去除首尾空白后精确匹配 |
+
+成功状态：`200 OK`
+
+```json
+{
+  "items": [
+    {
+      "id": 8,
+      "questionText": "TCP 为什么需要拥塞控制？",
+      "subject": "408",
+      "knowledgePoints": [
+        {
+          "id": 4,
+          "name": "拥塞控制",
+          "parentId": 3
+        }
+      ],
+      "createdTime": "2026-09-02T20:10:30",
+      "updatedTime": "2026-09-02T20:10:30"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+规则：
+
+- 固定按 `question.id DESC` 排序；
+- 不允许调用方自定义排序；
+- 列表摘要不返回答案、解析、错误原因和图片路径；
+- 超出范围的页和不存在的科目均返回 `200 OK` 与空 `items`；
+- 空白 `subject` 或非法分页参数返回 400；
+- F-004 不提供知识点筛选。
+
+---
+
+## 14. 修改错题
+
+### PUT `/api/questions/{id}`
+
+PUT 提交全部可编辑字段，请求结构与创建错题相同。
+
+成功状态：`200 OK`
+
+规则：
+
+- 五个文本字段全部替换；
+- 知识点关联集合全部替换；
+- 根据新知识点集合重新计算 `subject`；
+- 允许用另一棵知识树中的合法集合切换科目；
+- `id`、`createdTime` 和 `imagePath` 保持不变；
+- `updatedTime` 反映本次修改；
+- 任一校验失败时整个事务回滚。
+
+---
+
+## 15. 删除错题
+
+### DELETE `/api/questions/{id}`
+
+成功状态：`200 OK`
+
+```json
+{
+  "message": "错题删除成功"
+}
+```
+
+删除采用真实删除。数据库通过 `ON DELETE CASCADE` 清理对应的 `question_knowledge_point` 记录，但不会删除任何知识点。
+
+---
+
+## 16. F-004 文本长度
+
+| 字段 | 最大长度 |
+| --- | ---: |
+| `questionText` | 10000 |
+| `wrongAnswer` | 5000 |
+| `correctAnswer` | 5000 |
+| `analysis` | 10000 |
+| `errorReason` | 2000 |
+
+没有实际作答时，`wrongAnswer` 使用文字“未作答”，不能使用空字符串。
+
+---
+
+## 17. F-004 错误码
+
+| 场景 | HTTP 状态 | code |
+| --- | ---: | --- |
+| 字段或分页参数校验失败 | 400 | `VALIDATION_FAILED` |
+| 知识点 ID 重复 | 400 | `QUESTION_DUPLICATE_KNOWLEDGE_POINT` |
+| 多个知识点跨科目 | 400 | `QUESTION_KNOWLEDGE_POINTS_CROSS_SUBJECT` |
+| JSON 无法解析 | 400 | `MALFORMED_REQUEST_BODY` |
+| 错题不存在 | 404 | `QUESTION_NOT_FOUND` |
+| 知识点不存在 | 404 | `KNOWLEDGE_POINT_NOT_FOUND` |
+| 数据库完整性约束冲突 | 409 | `DATA_INTEGRITY_CONFLICT` |
+
+---
+
+## 18. F-004 不提供的接口
+
+F-004 不提供：
+
+- PATCH；
+- 批量创建、修改或删除；
+- 知识点筛选和复杂搜索；
+- 图片上传；
+- OCR；
+- 复习、统计和前端页面。
