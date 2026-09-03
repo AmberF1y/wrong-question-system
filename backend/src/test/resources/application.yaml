@@ -1,19 +1,19 @@
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/wrong_question_system
+    url: jdbc:mysql://localhost:3306/wrong_question_system_test
     username: root
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   flyway:
-    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
+    baseline-on-migrate: false
     baseline-version: 1
 
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         jdbc:

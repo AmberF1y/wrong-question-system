@@ -5,11 +5,14 @@ import com.wrongquestion.backend.knowledge.exception.KnowledgePointNotFoundExcep
 import com.wrongquestion.backend.knowledge.exception.KnowledgePointValidationException;
 import com.wrongquestion.backend.question.exception.QuestionNotFoundException;
 import com.wrongquestion.backend.question.exception.QuestionValidationException;
+import com.wrongquestion.backend.review.exception.ReviewConflictException;
+import com.wrongquestion.backend.review.exception.ReviewValidationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -123,6 +126,48 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 exception.getCode(),
                 exception.getMessage(),
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(ReviewValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handleReviewValidation(
+            ReviewValidationException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                ReviewValidationException.CODE,
+                exception.getMessage(),
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(ReviewConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleReviewConflict(
+            ReviewConflictException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                exception.getCode(),
+                exception.getMessage(),
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleOptimisticLockConflict(
+            ObjectOptimisticLockingFailureException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                "REVIEW_CONCURRENT_MODIFICATION",
+                "复习状态已被其他请求修改",
                 request.getRequestURI(),
                 null
         );

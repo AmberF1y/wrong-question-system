@@ -14,12 +14,17 @@ import com.wrongquestion.backend.question.entity.Question;
 import com.wrongquestion.backend.question.exception.QuestionNotFoundException;
 import com.wrongquestion.backend.question.exception.QuestionValidationException;
 import com.wrongquestion.backend.question.repository.QuestionRepository;
+import com.wrongquestion.backend.review.entity.QuestionReviewState;
+import com.wrongquestion.backend.review.entity.ReviewStatus;
+import com.wrongquestion.backend.review.repository.QuestionReviewStateRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -42,16 +47,22 @@ public class QuestionService {
 
     private final QuestionRepository questionRepository;
     private final KnowledgePointRepository knowledgePointRepository;
+    private final QuestionReviewStateRepository reviewStateRepository;
     private final EntityManager entityManager;
+    private final Clock clock;
 
     public QuestionService(
             QuestionRepository questionRepository,
             KnowledgePointRepository knowledgePointRepository,
-            EntityManager entityManager
+            QuestionReviewStateRepository reviewStateRepository,
+            EntityManager entityManager,
+            Clock clock
     ) {
         this.questionRepository = questionRepository;
         this.knowledgePointRepository = knowledgePointRepository;
+        this.reviewStateRepository = reviewStateRepository;
         this.entityManager = entityManager;
+        this.clock = clock;
     }
 
     @Transactional
@@ -79,12 +90,19 @@ public class QuestionService {
 
         Question savedQuestion = questionRepository.saveAndFlush(question);
         entityManager.refresh(savedQuestion);
-        return toDetailResponse(savedQuestion);
+        QuestionReviewState reviewState = reviewStateRepository.saveAndFlush(
+                new QuestionReviewState(
+                        savedQuestion,
+                        LocalDate.now(clock).plusDays(1)
+                )
+        );
+        return toDetailResponse(savedQuestion, reviewState);
     }
 
     @Transactional(readOnly = true)
     public QuestionDetailResponse getById(Long id) {
-        return toDetailResponse(findQuestionWithKnowledgePoints(id));
+        Question question = findQuestionWithKnowledgePoints(id);
+        return toDetailResponse(question, findReviewState(id));
     }
 
     @Transactional(readOnly = true)
@@ -93,16 +111,25 @@ public class QuestionService {
             int size,
             String subject
     ) {
+        return getPage(page, size, subject, null);
+    }
+
+    @Transactional(readOnly = true)
+    public QuestionPageResponse getPage(
+            int page,
+            int size,
+            String subject,
+            ReviewStatus reviewStatus
+    ) {
         validatePageParameters(page, size);
         String normalizedSubject = normalizeSubjectFilter(subject);
         PageRequest pageRequest = PageRequest.of(page, size);
 
-        Page<Long> idPage = normalizedSubject == null
-                ? questionRepository.findPageIds(pageRequest)
-                : questionRepository.findPageIdsBySubject(
-                        normalizedSubject,
-                        pageRequest
-                );
+        Page<Long> idPage = findQuestionIdPage(
+                normalizedSubject,
+                reviewStatus,
+                pageRequest
+        );
 
         if (idPage.isEmpty()) {
             return new QuestionPageResponse(
@@ -122,6 +149,13 @@ public class QuestionService {
                         Question::getId,
                         Function.identity()
                 ));
+        Map<Long, QuestionReviewState> statesById = reviewStateRepository
+                .findAllByQuestionIdIn(ids)
+                .stream()
+                .collect(Collectors.toMap(
+                        QuestionReviewState::getQuestionId,
+                        Function.identity()
+                ));
 
         List<QuestionSummaryResponse> items = ids.stream()
                 .map(id -> {
@@ -129,7 +163,13 @@ public class QuestionService {
                     if (question == null) {
                         throw new IllegalStateException("分页错题数据不完整");
                     }
-                    return toSummaryResponse(question);
+                    QuestionReviewState state = statesById.get(id);
+                    if (state == null) {
+                        throw new IllegalStateException(
+                                "错题缺少复习状态：" + id
+                        );
+                    }
+                    return toSummaryResponse(question, state);
                 })
                 .toList();
 
@@ -172,7 +212,7 @@ public class QuestionService {
         questionRepository.saveAndFlush(question);
         questionRepository.touchUpdatedTime(id);
         entityManager.refresh(question);
-        return toDetailResponse(question);
+        return toDetailResponse(question, findReviewState(id));
     }
 
     @Transactional
@@ -332,7 +372,44 @@ public class QuestionService {
                 .orElseThrow(() -> new QuestionNotFoundException("错题不存在"));
     }
 
-    private QuestionDetailResponse toDetailResponse(Question question) {
+    private Page<Long> findQuestionIdPage(
+            String subject,
+            ReviewStatus reviewStatus,
+            PageRequest pageRequest
+    ) {
+        if (subject == null && reviewStatus == null) {
+            return questionRepository.findPageIds(pageRequest);
+        }
+        if (subject != null && reviewStatus == null) {
+            return questionRepository.findPageIdsBySubject(
+                    subject,
+                    pageRequest
+            );
+        }
+        if (subject == null) {
+            return questionRepository.findPageIdsByReviewStatus(
+                    reviewStatus,
+                    pageRequest
+            );
+        }
+        return questionRepository.findPageIdsBySubjectAndReviewStatus(
+                subject,
+                reviewStatus,
+                pageRequest
+        );
+    }
+
+    private QuestionReviewState findReviewState(Long questionId) {
+        return reviewStateRepository.findById(questionId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "错题缺少复习状态：" + questionId
+                ));
+    }
+
+    private QuestionDetailResponse toDetailResponse(
+            Question question,
+            QuestionReviewState reviewState
+    ) {
         return new QuestionDetailResponse(
                 question.getId(),
                 question.getQuestionText(),
@@ -344,18 +421,29 @@ public class QuestionService {
                 question.getImagePath(),
                 toKnowledgePointResponses(question),
                 question.getCreatedTime(),
-                question.getUpdatedTime()
+                question.getUpdatedTime(),
+                reviewState.getReviewStatus(),
+                reviewState.getNextReviewDate(),
+                reviewState.getConsecutiveProficientCount(),
+                reviewState.getLastReviewedAt()
         );
     }
 
-    private QuestionSummaryResponse toSummaryResponse(Question question) {
+    private QuestionSummaryResponse toSummaryResponse(
+            Question question,
+            QuestionReviewState reviewState
+    ) {
         return new QuestionSummaryResponse(
                 question.getId(),
                 question.getQuestionText(),
                 question.getSubject(),
                 toKnowledgePointResponses(question),
                 question.getCreatedTime(),
-                question.getUpdatedTime()
+                question.getUpdatedTime(),
+                reviewState.getReviewStatus(),
+                reviewState.getNextReviewDate(),
+                reviewState.getConsecutiveProficientCount(),
+                reviewState.getLastReviewedAt()
         );
     }
 

@@ -12,17 +12,24 @@ import com.wrongquestion.backend.question.entity.Question;
 import com.wrongquestion.backend.question.exception.QuestionNotFoundException;
 import com.wrongquestion.backend.question.exception.QuestionValidationException;
 import com.wrongquestion.backend.question.repository.QuestionRepository;
+import com.wrongquestion.backend.review.entity.QuestionReviewState;
+import com.wrongquestion.backend.review.entity.ReviewStatus;
+import com.wrongquestion.backend.review.repository.QuestionReviewStateRepository;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -45,10 +52,27 @@ class QuestionServiceTest {
     private KnowledgePointRepository knowledgePointRepository;
 
     @Mock
+    private QuestionReviewStateRepository reviewStateRepository;
+
+    @Mock
     private EntityManager entityManager;
 
-    @InjectMocks
     private QuestionService questionService;
+
+    @BeforeEach
+    void setUp() {
+        Clock clock = Clock.fixed(
+                Instant.parse("2026-09-03T02:00:00Z"),
+                ZoneId.of("Asia/Shanghai")
+        );
+        questionService = new QuestionService(
+                questionRepository,
+                knowledgePointRepository,
+                reviewStateRepository,
+                entityManager,
+                clock
+        );
+    }
 
     @Test
     void shouldCreateQuestionAndDeriveSubjectFromCommonRoot() {
@@ -66,6 +90,8 @@ class QuestionServiceTest {
         assertEquals(10L, response.id());
         assertEquals("题目", response.questionText());
         assertEquals("408", response.subject());
+        assertEquals(ReviewStatus.ACTIVE, response.reviewStatus());
+        assertEquals(LocalDate.of(2026, 9, 4), response.nextReviewDate());
         assertEquals(List.of(2L, 3L), response.knowledgePoints().stream()
                 .map(item -> item.id())
                 .toList());
@@ -205,6 +231,8 @@ class QuestionServiceTest {
         Question question = question(8L, "题目", "408", second, first);
         when(questionRepository.findWithKnowledgePointsById(8L))
                 .thenReturn(Optional.of(question));
+        when(reviewStateRepository.findById(8L))
+                .thenReturn(Optional.of(reviewState(question)));
 
         QuestionDetailResponse response = questionService.getById(8L);
 
@@ -235,6 +263,11 @@ class QuestionServiceTest {
         when(questionRepository.findAllWithKnowledgePointsByIdIn(
                 List.of(3L, 1L)
         )).thenReturn(List.of(first, third));
+        when(reviewStateRepository.findAllByQuestionIdIn(List.of(3L, 1L)))
+                .thenReturn(List.of(
+                        reviewState(first),
+                        reviewState(third)
+                ));
 
         QuestionPageResponse response = questionService.getPage(0, 2, null);
 
@@ -260,6 +293,51 @@ class QuestionServiceTest {
         assertTrue(response.items().isEmpty());
         verify(questionRepository).findPageIdsBySubject("408", pageRequest);
         verify(questionRepository, never()).findPageIds(any());
+    }
+
+    @Test
+    void shouldApplyReviewStatusAndCombinedPageFilters() {
+        PageRequest pageRequest = PageRequest.of(0, 20);
+        when(questionRepository.findPageIdsByReviewStatus(
+                ReviewStatus.MASTERED,
+                pageRequest
+        )).thenReturn(new PageImpl<>(List.of(), pageRequest, 0));
+        when(questionRepository.findPageIdsBySubjectAndReviewStatus(
+                "408",
+                ReviewStatus.ACTIVE,
+                pageRequest
+        )).thenReturn(new PageImpl<>(List.of(), pageRequest, 0));
+
+        questionService.getPage(0, 20, null, ReviewStatus.MASTERED);
+        questionService.getPage(0, 20, "  408  ", ReviewStatus.ACTIVE);
+
+        verify(questionRepository).findPageIdsByReviewStatus(
+                ReviewStatus.MASTERED,
+                pageRequest
+        );
+        verify(questionRepository).findPageIdsBySubjectAndReviewStatus(
+                "408",
+                ReviewStatus.ACTIVE,
+                pageRequest
+        );
+    }
+
+    @Test
+    void shouldFailPageResponseWhenReviewStateIsMissing() {
+        PageRequest pageRequest = PageRequest.of(0, 20);
+        Question question = question(1L, "题目", "408");
+        when(questionRepository.findPageIds(pageRequest)).thenReturn(
+                new PageImpl<>(List.of(1L), pageRequest, 1)
+        );
+        when(questionRepository.findAllWithKnowledgePointsByIdIn(List.of(1L)))
+                .thenReturn(List.of(question));
+        when(reviewStateRepository.findAllByQuestionIdIn(List.of(1L)))
+                .thenReturn(List.of());
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> questionService.getPage(0, 20, null)
+        );
     }
 
     @Test
@@ -305,6 +383,8 @@ class QuestionServiceTest {
                 .thenReturn(List.of(newLeaf));
         when(questionRepository.saveAndFlush(question)).thenReturn(question);
         when(questionRepository.touchUpdatedTime(10L)).thenReturn(1);
+        when(reviewStateRepository.findById(10L))
+                .thenReturn(Optional.of(reviewState(question)));
 
         QuestionDetailResponse response = questionService.update(
                 10L,
@@ -458,5 +538,16 @@ class QuestionServiceTest {
                     ReflectionTestUtils.setField(question, "id", id);
                     return question;
                 });
+        when(reviewStateRepository.saveAndFlush(any(QuestionReviewState.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    private QuestionReviewState reviewState(Question question) {
+        QuestionReviewState state = new QuestionReviewState(
+                question,
+                LocalDate.of(2026, 9, 4)
+        );
+        ReflectionTestUtils.setField(state, "questionId", question.getId());
+        return state;
     }
 }

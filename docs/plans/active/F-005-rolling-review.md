@@ -2269,3 +2269,169 @@ feat: implement F-005 rolling review
 - 最终提交、PR、合并提交和测试数量均已记录。
 
 在以上条件全部满足前，`docs/project-status.md` 不得把 F-005 标记为 Completed。
+
+---
+
+## 38. 实施与验收记录
+
+### 38.1 已写入功能分支的实现
+
+2026-09-04 已在基于 `bba3122` 的功能分支和计划提交 `d5187f3` 上完成实现：
+
+- Flyway 依赖、V1、V2；
+- 开发库与测试库创建脚本；
+- 独立测试数据源；
+- 时区配置与可注入 Clock；
+- ReviewStatus、ReviewRating、ReviewEventType；
+- QuestionReviewState、ReviewRecord；
+- `@MapsId` 共享主键与 `@Version` 乐观锁；
+- ReviewSchedulingPolicy；
+- Review Repository、Service、Controller 和 DTO；
+- 三个复习 API；
+- Question 创建、响应摘要和状态分页集成；
+- 统一复习错误响应；
+- 调度、时间、Service、Repository、Controller、生命周期和并发测试代码；
+- README、PRODUCT、API、数据库、项目状态和 ADR 文档。
+
+### 38.2 生成阶段的静态验证
+
+生成环境已完成以下静态验证和修正：
+
+- `pom.xml` 通过 XML 解析；
+- 主配置和测试配置通过 YAML 解析；
+- 测试配置显式固定为 `wrong_question_system_test`，并补齐用户名、
+  密码、Hibernate Validate 和 JDBC UTC 配置；
+- Flyway 迁移文件的语句边界和 V1/V2 职责已核对；
+- 已检查 F-005 Java 文件的重复类型和可能未使用 import，并删除发现的
+  未使用 import；
+- 评价与重新加入操作改为从同一 `Instant` 推导业务日期，避免午夜边界
+  出现日期与事件时刻不一致；
+- 新增测试数据库名称断言，降低测试误连日常开发库的风险；
+- 修正 PRODUCT 和数据库设计中与 F-005 当前设计冲突的历史表述。
+
+生成环境不能完成可信 Java/MySQL 验证，原因是：
+
+- 环境只有 JDK 17，项目要求 JDK 21；
+- Maven Central 在生成环境中不可解析；
+- 没有本地 MySQL 和 `DB_PASSWORD`。
+
+已实际尝试：
+
+```text
+sh ./mvnw -DskipTests compile
+```
+
+Maven 在解析父 POM 时因 `repo.maven.apache.org` 无法解析而失败，没有进入
+Java 源码编译阶段。该结果未被当作测试通过；后续结果均来自用户本地
+Java 21 与真实 MySQL 环境。
+
+### 38.3 本地自动化测试
+
+用户本地环境：
+
+- Java 21.0.12；
+- Maven Wrapper 3.9.16；
+- Spring Boot 4.1.1；
+- MySQL 9.6；
+- 独立测试库 `wrong_question_system_test`。
+
+第一次完整测试实际运行 113 个测试，出现 3 个失败和 2 个错误。根据真实
+输出完成以下修正：
+
+- 删除级联测试在断言数据库结果前清空 JPA 持久化上下文，避免一级缓存
+  返回已被数据库级联删除的旧实体；
+- 时间相关测试只读取一次可变测试 Clock，避免同一断言中的时间漂移；
+- MySQL CHECK 约束测试按 Spring 数据访问异常和 MySQL 错误码 `3819`
+  验证，不依赖可能随 Hibernate 版本变化的具体异常子类。
+
+随后定向运行 16 个测试，发现 Java `Instant` 纳秒精度与 MySQL
+`DATETIME(6)` 微秒精度不一致。实现改为在持久化复习事件时间前统一截断到
+微秒，测试也按同一持久化精度构造预期值。
+
+最终实际执行：
+
+```text
+.\mvnw.cmd clean test
+```
+
+结果：
+
+- 编译 47 个生产源码文件和 16 个测试源码文件；
+- Tests run：113；
+- Failures：0；
+- Errors：0；
+- Skipped：0；
+- BUILD SUCCESS；
+- 总耗时 32.078 秒；
+- 原有 65 个测试和 F-005 新增 48 个测试全部通过；
+- Flyway 空库迁移、Hibernate Validate、Repository 约束和两个独立事务
+  并发测试均在真实 MySQL 上通过。
+
+测试日志包含 Flyway 对 MySQL 9.6 高于其已验证版本 9.4 的兼容性提示，
+以及 Mockito 动态加载 agent 的未来兼容性提示；两者均未造成测试失败。
+
+### 38.4 已有开发库迁移验收
+
+迁移前只读核对确认 `wrong_question_system` 只有 F-004 的三张业务表，
+数据量为 `question=0`、`knowledge_point=4`、
+`question_knowledge_point=0`，表结构、索引和外键与 V1 一致。
+
+迁移前创建了可恢复的无 GTID 备份：
+
+```text
+D:\Projects\wrong-question-system-backups\wrong_question_system-before-F005-no-gtid-20260904-071220.sql
+SHA-256: AC325FD38E9FA10669D507C8DE0EE99C282D1B0FD31E20F3B4BE759B743951D0
+```
+
+为验证旧题回填，迁移前创建一条受控夹具：题目 ID 为 `45`，创建时间为
+`2026-08-31 10:20:30`，并保留一条知识点关联。随后仅本次启动显式设置
+`FLYWAY_BASELINE_ON_MIGRATE=true`，实际结果为：
+
+- Flyway 成功把已有三表结构登记为版本 1；
+- V2 `add rolling review` 成功执行；
+- Hibernate EntityManagerFactory 成功初始化，应用成功启动；
+- Flyway 历史包含成功的 V1 BASELINE 和 V2 SQL；
+- 夹具获得唯一 ACTIVE 状态，`next_review_date=2026-09-01`，与
+  `DATE(created_time) + 1 day` 一致；
+- 原题和知识点关联保持不变；
+- 状态队列索引、历史时间索引、科目索引以及两张新表的 PK、FK、CHECK
+  约束均存在；
+- `FLYWAY_BASELINE_ON_MIGRATE` 已恢复为未设置状态。
+
+### 38.5 手工 API 验收
+
+通过真实 HTTP 请求执行 16 步手工验收，全部通过：
+
+- 清理迁移夹具并验证数据库级联；
+- 创建隔离知识树和新题，验证初始复习摘要；
+- 验证未到期排除、到期/逾期包含、最早到期与同日 ID 顺序；
+- 验证包含当前题的 `dueCount`、科目筛选和空筛选结果；
+- 复用错题详情接口查看答案；
+- 分别验证四级评价的 1、3、7、14 天间隔；
+- 验证提交成功后数量减少、重复提交冲突和 ACTIVE 重新加入冲突；
+- 验证连续两次熟练进入 MASTERED 以及分页状态筛选；
+- 验证已掌握题重新加入当天到期并保留 `lastReviewedAt`；
+- 验证修改错题保留状态与历史；
+- 验证删除错题级联删除状态和全部历史。
+
+脚本最终输出：
+
+```text
+F-005 MANUAL API VERIFICATION: PASSED
+最终数量 question,knowledge_point,relation,state,history=0,4,0,0,0
+```
+
+迁移夹具和全部 API 临时数据均已清理。
+
+### 38.6 尚待 Git 与合并验收
+
+F-005 仍保持 In Progress，尚待：
+
+1. 最终核对工作树范围并通过 `git diff --check`；
+2. 提交和推送实现与文档；
+3. 创建 PR，并通过 Merge Commit 合并到 `main`；
+4. 在合并后的 `main` 再次执行全部 113 个测试；
+5. 记录实现提交、PR、合并提交和 main 回归结果；
+6. 将本计划移入 `docs/plans/completed/`；
+7. 清理本地与远程功能分支；
+8. 确认最终 `main` 工作树 clean 且与 `origin/main` 同步。

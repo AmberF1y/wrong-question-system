@@ -1,6 +1,7 @@
 package com.wrongquestion.backend.question.repository;
 
 import com.wrongquestion.backend.question.entity.Question;
+import com.wrongquestion.backend.review.entity.ReviewStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -45,6 +46,49 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
     )
     Page<Long> findPageIdsBySubject(
             @Param("subject") String subject,
+            Pageable pageable
+    );
+
+    @Query(
+            value = """
+                    select question.id
+                    from Question question, QuestionReviewState state
+                    where state.questionId = question.id
+                      and state.reviewStatus = :reviewStatus
+                    order by question.id desc
+                    """,
+            countQuery = """
+                    select count(question)
+                    from Question question, QuestionReviewState state
+                    where state.questionId = question.id
+                      and state.reviewStatus = :reviewStatus
+                    """
+    )
+    Page<Long> findPageIdsByReviewStatus(
+            @Param("reviewStatus") ReviewStatus reviewStatus,
+            Pageable pageable
+    );
+
+    @Query(
+            value = """
+                    select question.id
+                    from Question question, QuestionReviewState state
+                    where state.questionId = question.id
+                      and question.subject = :subject
+                      and state.reviewStatus = :reviewStatus
+                    order by question.id desc
+                    """,
+            countQuery = """
+                    select count(question)
+                    from Question question, QuestionReviewState state
+                    where state.questionId = question.id
+                      and question.subject = :subject
+                      and state.reviewStatus = :reviewStatus
+                    """
+    )
+    Page<Long> findPageIdsBySubjectAndReviewStatus(
+            @Param("subject") String subject,
+            @Param("reviewStatus") ReviewStatus reviewStatus,
             Pageable pageable
     );
 

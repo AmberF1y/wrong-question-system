@@ -4,7 +4,7 @@
 
 本文件只记录项目当前真实状态。已经完成的内容、正在进行的内容和尚未完成的内容必须明确区分。
 
-更新时间：2026-09-02
+更新时间：2026-09-04
 
 ---
 
@@ -16,27 +16,21 @@
 | F-002 | Completed | 数据库设计、JPA Entity、Repository 与真实 MySQL 集成测试 |
 | F-003 | Completed | 知识点管理业务层、REST API、异常响应与测试 |
 | F-004 | Completed | 错题基础管理业务层、REST API、异常响应与测试 |
+| F-005 | In Progress | 实现已通过 Java 21 自动化测试、旧库迁移和手工 API 验收，等待 Git 提交、PR、合并与 main 回归 |
 
 当前开发分支：
 
 ```text
-main
+feature/F-005-rolling-review
 ```
 
-F-004 已通过 Pull Request #4 使用 Merge Commit 合并到 `main`：
+F-005 从 `main` 的 `bba3122` 开始，正式计划提交为：
 
 ```text
-ce54aad Merge pull request #4 from AmberF1y/feature/F-004-question-management
+d5187f3 docs: add F-005 rolling review plan
 ```
 
-F-004 的计划与实现提交为：
-
-```text
-bb22c98 docs: add F-004 question management plan
-d220806 feat: implement F-004 question management
-```
-
-合并后的 `main` 已重新通过全部 65 个测试，工作区 clean。F-001、F-002、F-003、F-004 的本地和远程功能分支均已在合并并验证后删除。
+F-005 实现代码已在用户真实仓库完成本地测试，但尚未提交。本文件在实际发生前不得填写实现提交、PR 或合并提交，也不得把 F-005 标记为 Completed。
 
 ---
 
@@ -69,29 +63,33 @@ d220806 feat: implement F-004 question management
 
 - MySQL 9.6
 - MySQL Connector/J
+- Flyway
 - Hibernate `ddl-auto: validate`
+- 独立测试数据库 `wrong_question_system_test`
 
 ### 当前明确不引入
 
 - MyBatis / MyBatis-Plus
-- Flyway
 - H2
 - Testcontainers
 - MapStruct
 - Lombok
 - Redis、消息队列、微服务等当前无实际需求的组件
 
-ADR-001 已经准确记录 Spring Data JPA 等技术选择，与真实代码一致。F-004 不新增其他 ADR。
+ADR-001 记录初始技术栈与分层；ADR-002 记录 F-005 引入 Flyway、
+一次性 baseline 和独立 MySQL 测试库的决策。
 
 ---
 
 ## 5. 当前数据库结构
 
-已存在三张表：
+F-005 迁移后的目标结构为五张表：
 
 - `question`
 - `knowledge_point`
 - `question_knowledge_point`
+- `question_review_state`
+- `review_record`
 
 主要关系：
 
@@ -101,7 +99,7 @@ ADR-001 已经准确记录 Spring Data JPA 等技术选择，与真实代码一�
 - `created_time`、`updated_time` 由 MySQL 维护；
 - Entity 通过 `insertable = false`、`updatable = false` 读取时间字段。
 
-F-003 未修改数据库表结构。F-004 继续复用三张表，只为 Question Entity 增加业务操作方法，不修改字段或关联映射。
+F-005 将原三表结构转为 Flyway V1，通过 V2 创建两张复习表、索引、约束并回填旧错题。该目标结构已在用户本地空测试库和备份后的旧开发库上完成验收。
 
 ---
 
@@ -369,4 +367,65 @@ F-004 不包含图片上传、OCR、复习、复杂搜索或前端页面。
 
 F-001、F-002、F-003、F-004 均已进入 `main`。F-004 的实现、65 个自动化测试、手工 API 验证、数据库清理、Pull Request 合并和功能分支清理均已完成。
 
-当前分支为 `main`，与 `origin/main` 同步，工作区 clean；当前没有处于 Active 状态的 Feature。
+当前正在开发 F-005。功能分支中的实现已在用户本地 Java 21.0.12 与
+MySQL 9.6 环境完成自动化测试、已有开发库迁移和手工 API 验收；尚待
+Git 提交、推送、PR、合并后的 `main` 回归以及分支清理。
+
+---
+
+## 18. F-005 当前实现与验收状态
+
+已写入并通过本地验收：
+
+- Flyway V1/V2 与独立测试库配置；
+- `question_review_state` 当前状态和 `review_record` 历史；
+- 配置时区与注入式 `Clock`；
+- 四级固定间隔调度规则；
+- 连续两次熟练进入 `MASTERED`；
+- 到期/逾期动态队列和科目筛选；
+- 评价与重新加入 API；
+- Question 响应复习摘要和状态分页筛选；
+- `@Version` 乐观锁；
+- 单元、Repository、Controller、生命周期和并发测试代码；
+- README、产品、API、数据库和 ADR 文档更新。
+
+本地自动化测试实际结果：
+
+- 命令：`.\mvnw.cmd clean test`；
+- Java：21.0.12；
+- MySQL：9.6，测试库为 `wrong_question_system_test`；
+- Tests run：113；
+- Failures：0；
+- Errors：0；
+- Skipped：0；
+- 结果：`BUILD SUCCESS`；
+- 原有 65 个测试全部回归通过，F-005 新增 48 个测试全部通过；
+- 两个真实 MySQL 独立事务并发测试全部通过。
+
+数据库迁移实际结果：
+
+- 空测试库已自动执行 Flyway V1、V2，并通过 Hibernate Validate；
+- 已有开发库迁移前完成无 GTID 备份，SHA-256 为
+  `AC325FD38E9FA10669D507C8DE0EE99C282D1B0FD31E20F3B4BE759B743951D0`；
+- 已核对旧库三表结构，并创建一条带知识点关联的受控旧题夹具；
+- 一次性显式 baseline 成功把旧结构登记为 V1，随后 V2 成功执行；
+- 旧题状态已按 `DATE(created_time) + 1 day` 回填；
+- Flyway 历史、两张新表、检查约束、外键和目标索引均已核对；
+- `FLYWAY_BASELINE_ON_MIGRATE` 已恢复为未设置状态。
+
+手工 API 验收实际结果：
+
+- 16 个步骤全部通过，覆盖新题初始状态、未到期排除、队列顺序、
+  `dueCount`、科目筛选、详情查看答案、四级评价间隔、重复提交冲突、
+  连续两次熟练、状态筛选、重新加入、修改保留进度和删除级联；
+- 清理后数量为 `question=0`、`knowledge_point=4`、`relation=0`、
+  `state=0`、`history=0`，没有遗留临时业务数据。
+
+尚未完成：
+
+1. 最终核对工作树范围和 `git diff --check`；
+2. 提交并推送实现与文档；
+3. 创建 PR 并以 Merge Commit 合并；
+4. 在合并后的 `main` 再次执行全部 113 个测试；
+5. 记录提交、PR 和合并信息并归档 Feature Plan；
+6. 清理本地与远程功能分支，确认 `main` clean 且与远端同步。

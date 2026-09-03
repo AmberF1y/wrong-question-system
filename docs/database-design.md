@@ -2,17 +2,17 @@
 
 ## 1. 当前版本
 
-v1.0 MVP
+v2.0 MVP
 
 当前阶段：
 
 ```text
-F-004 错题基础管理业务层与 REST API
+F-005 固定规则滚动复习已通过本地数据库验收，待合并
 ```
 
 状态：
 
-> F-002 已完成建表 SQL、Spring Data JPA Entity、Repository 与真实 MySQL 集成测试。F-003 已完成知识点管理。F-004 不修改表结构，在现有结构上实现错题基础管理业务层与 REST API。
+> F-001～F-004 的三表结构已成为 Flyway V1。F-005 通过 V2 增加当前复习状态、不可变复习历史、约束、索引和已有错题回填；空测试库迁移、已有开发库 baseline 升级与 Hibernate Schema Validate 均已通过本地验收。
 
 ---
 
@@ -71,12 +71,14 @@ Spring Data JPA
 
 # 4. 当前数据模型
 
-F-002 当前设计三张数据表：
+当前设计五张数据表：
 
 ```text
 question
 knowledge_point
 question_knowledge_point
+question_review_state
+review_record
 ```
 
 分别负责：
@@ -90,6 +92,12 @@ knowledge_point
 
 question_knowledge_point
 → 保存错题和知识点之间的多对多关系
+
+question_review_state
+→ 保存每道错题唯一的当前复习状态
+
+review_record
+→ 保存一题多条、不可变的复习事件历史
 ```
 
 整体关系：
@@ -1407,9 +1415,9 @@ deleted_time
 
 ---
 
-# 20. 当前不设计复习字段
+# 20. F-002 阶段未提前设计复习字段（历史决策）
 
-本阶段暂时不在：
+F-002 阶段没有直接在：
 
 ```text
 question
@@ -1427,11 +1435,7 @@ review_status
 
 等字段。
 
-原因：
-
-滚动复习的数据模型和复习历史需要在对应 Feature 中根据实际复习规则单独设计。
-
-需要重点区分：
+原因是当时尚未确认滚动复习规则，需要在对应 Feature 中区分：
 
 ```text
 题目的当前复习状态
@@ -1443,7 +1447,9 @@ review_status
 每一次历史复习记录
 ```
 
-因此不在 F-002 阶段提前假设最终结构。
+F-005 已据此采用独立的 `question_review_state` 和 `review_record`
+两张表，具体当前设计见第 30～33 节。以上内容只保留为 F-002
+没有提前把复习字段塞入 `question` 表的历史原因，不再表示复习数据尚未设计。
 
 ---
 
@@ -1696,31 +1702,7 @@ knowledge_point
 
 根据真实需求，未来可能增加：
 
-## review_record
-
-用于保存：
-
-```text
-每一次复习历史
-掌握程度
-复习时间
-评价结果
-```
-
----
-
-## 复习状态相关数据
-
-用于支持：
-
-```text
-下一次复习时间
-当前掌握程度
-是否已掌握
-滚动复习队列
-```
-
-具体结构由后续复习 Feature 设计决定。
+复习状态与复习历史已在 F-005 中实现，不再属于未来扩展项。后续可能在现有 `review_record` 上增加历史查询与统计，但不得通过改写既有迁移文件完成。
 
 ---
 
@@ -1754,10 +1736,9 @@ OCR修改结果
 
 # 28. 当前阶段明确不做
 
-F-002 当前不提前实现：
+当前仍不提前实现：
 
 ```text
-复习历史表
 复杂复习算法
 OCR任务表
 AI解析数据
@@ -1775,7 +1756,7 @@ AI解析数据
 
 # 29. 当前实现状态
 
-F-002 已完成 `sql/init.sql`、三张数据库表及约束、Question/KnowledgePoint Entity、Repository、Hibernate `ddl-auto: validate` 和真实 MySQL Repository 集成测试。
+F-002 完成的三张表已原样转为 `V1__initial_schema.sql`。`sql/init.sql` 不再作为结构来源。
 
 F-003 在现有表结构上实现知识点 Service、事务、REST API 和严格业务校验，不新增或修改数据库表。
 
@@ -1785,8 +1766,107 @@ F-004 在同一结构上实现错题创建、详情、分页、修改和删除�
 - 分页先查询 `question.id`，再批量加载错题及知识点，避免多对多 fetch join 直接分页造成结果失真；
 - 删除 `question` 后由现有外键级联清理关联表，不删除知识点；
 - `spring.jpa.open-in-view=false`，响应映射所需关联必须在 Service 只读事务中明确加载；
-- 不修改 `sql/init.sql`、数据表、字段、索引或外键。
+- F-004 当时未修改数据库结构；该历史事实不因 F-005 改变。
+
+F-005 新增 Flyway 和两张复习表。应用启动顺序为：
+
+```text
+Flyway 执行版本迁移
+→ Hibernate ddl-auto=validate 校验 Entity 映射
+→ Spring 应用开始提供接口
+```
 
 本文件作为当前数据库结构设计的主要依据。
 
 后续如果数据库设计发生重要变化，应先讨论设计方案，再同步修改该文档和数据库结构。
+
+---
+
+# 30. Flyway 迁移来源
+
+业务表结构只从以下迁移文件产生：
+
+```text
+backend/src/main/resources/db/migration/V1__initial_schema.sql
+backend/src/main/resources/db/migration/V2__add_rolling_review.sql
+```
+
+`sql/create-database.sql` 和 `sql/create-test-database.sql` 只创建空数据库，不创建业务表。
+
+V1 是 F-004 完成时的三表基线；V2 创建复习结构、增加 `question(subject)` 索引，并为每道已有错题回填一条 `ACTIVE` 状态：
+
+```text
+next_review_date = DATE(question.created_time) + 1 天
+consecutive_proficient_count = 0
+last_reviewed_at = NULL
+version = 0
+```
+
+V1、V2 一旦应用后不可回写，后续修改通过 V3、V4 等新迁移完成。
+
+---
+
+# 31. question_review_state
+
+一题恰好一条当前状态，`question_id` 同时是主键和外键：
+
+| 字段 | 类型 | 可空 | 说明 |
+| --- | --- | --- | --- |
+| `question_id` | BIGINT | 否 | 共享主键，指向 `question.id` |
+| `review_status` | VARCHAR(20) | 否 | `ACTIVE` / `MASTERED` |
+| `next_review_date` | DATE | 是 | 活动题必填，已掌握题为空 |
+| `consecutive_proficient_count` | INT | 否 | 0、1 或已掌握时的 2 |
+| `last_reviewed_at` | DATETIME(6) | 是 | 最后一次真实评价时刻，UTC 语义 |
+| `version` | BIGINT | 否 | JPA 乐观锁版本 |
+
+一致性约束：
+
+- `ACTIVE`：下一次日期非空，连续熟练次数为 0 或 1；
+- `MASTERED`：下一次日期为空，连续熟练次数为 2，最后评价时间非空；
+- `version >= 0`。
+
+队列索引：
+
+```text
+(review_status, next_review_date, question_id)
+```
+
+删除 Question 时通过外键 `ON DELETE CASCADE` 删除状态。
+
+---
+
+# 32. review_record
+
+每次评价或重新加入写入一条不可变历史：
+
+| 字段 | 类型 | 可空 | 说明 |
+| --- | --- | --- | --- |
+| `id` | BIGINT | 否 | 自增主键 |
+| `question_id` | BIGINT | 否 | 关联错题 |
+| `event_type` | VARCHAR(20) | 否 | `EVALUATION` / `REACTIVATION` |
+| `rating` | VARCHAR(30) | 是 | 四级评价；重新加入时为空 |
+| `business_date` | DATE | 否 | 配置时区下的业务日期 |
+| `occurred_at` | DATETIME(6) | 否 | UTC 语义的实际时刻 |
+| `scheduled_review_date` | DATE | 是 | 评价前原到期日；重新加入时为空 |
+| `resulting_status` | VARCHAR(20) | 否 | 事件后的状态 |
+| `resulting_next_review_date` | DATE | 是 | 事件后的下一次日期 |
+| `resulting_proficient_count` | INT | 否 | 事件后的连续熟练次数 |
+
+历史不保存题目内容快照，不提供修改或单独删除接口。删除 Question 时级联删除全部历史。
+
+历史索引：
+
+```text
+(question_id, occurred_at, id)
+```
+
+---
+
+# 33. 时间与并发语义
+
+- 业务日期使用 `LocalDate`；
+- 事件时刻使用 `Instant`，数据库按 UTC 语义保存；
+- 默认业务时区为 `Asia/Shanghai`；
+- Hibernate JDBC 时区固定为 UTC；
+- `question_review_state.version` 由 JPA `@Version` 管理；
+- 状态更新与历史插入处于同一事务，任何失败整体回滚。
