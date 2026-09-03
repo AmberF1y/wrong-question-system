@@ -2425,13 +2425,22 @@ F-005 MANUAL API VERIFICATION: PASSED
 
 ### 38.6 尚待 Git 与合并验收
 
+提交前范围与格式检查已通过：共核对 50 个变更路径，没有 F-005 范围外
+文件，`git diff --cached --check` 无错误。已创建并推送实现提交：
+
+```text
+9687337 feat: implement F-005 rolling review
+```
+
+推送后本地与远程 `feature/F-005-rolling-review` 均指向 `9687337`，工作区
+clean 且与远程同步。
+
 F-005 仍保持 In Progress，尚待：
 
-1. 最终核对工作树范围并通过 `git diff --check`；
-2. 提交和推送实现与文档；
-3. 创建 PR，并通过 Merge Commit 合并到 `main`；
-4. 在合并后的 `main` 再次执行全部 113 个测试；
-5. 记录实现提交、PR、合并提交和 main 回归结果；
-6. 将本计划移入 `docs/plans/completed/`；
-7. 清理本地与远程功能分支；
-8. 确认最终 `main` 工作树 clean 且与 `origin/main` 同步。
+1. 提交并推送本次状态文档更新；
+2. 创建 PR，并通过 Merge Commit 合并到 `main`；
+3. 在合并后的 `main` 再次执行全部 113 个测试；
+4. 记录 PR、合并提交和 main 回归结果；
+5. 将本计划移入 `docs/plans/completed/`；
+6. 清理本地与远程功能分支；
+7. 确认最终 `main` 工作树 clean 且与 `origin/main` 同步。
