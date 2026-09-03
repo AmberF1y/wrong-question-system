@@ -6,11 +6,11 @@
 | --- | --- |
 | Feature ID | F-005 |
 | Feature 名称 | 固定规则滚动复习核心闭环 |
-| 状态 | Planned |
+| 状态 | Completed |
 | 规划日期 | 2026-09-04 |
 | 规划基线 | `main`，用户确认 HEAD 为 `bba3122` |
 | 计划分支 | `feature/F-005-rolling-review` |
-| 计划文件 | `docs/plans/active/F-005-rolling-review.md` |
+| 计划文件 | `docs/plans/completed/F-005-rolling-review.md` |
 | 前置 Feature | F-001、F-002、F-003、F-004 均已完成并合并到 `main` |
 | 基线测试 | 65 个测试全部通过，由用户提供的真实仓库状态与项目文档共同确认 |
 
@@ -2423,7 +2423,7 @@ F-005 MANUAL API VERIFICATION: PASSED
 
 迁移夹具和全部 API 临时数据均已清理。
 
-### 38.6 尚待 Git 与合并验收
+### 38.6 Git、合并与最终回归验收
 
 提交前范围与格式检查已通过：共核对 50 个变更路径，没有 F-005 范围外
 文件，`git diff --cached --check` 无错误。已创建并推送实现提交：
@@ -2432,15 +2432,41 @@ F-005 MANUAL API VERIFICATION: PASSED
 9687337 feat: implement F-005 rolling review
 ```
 
-推送后本地与远程 `feature/F-005-rolling-review` 均指向 `9687337`，工作区
-clean 且与远程同步。
+实现提交后又创建并推送验证记录提交：
 
-F-005 仍保持 In Progress，尚待：
+```text
+a90a653 docs: record F-005 verification status
+```
 
-1. 提交并推送本次状态文档更新；
-2. 创建 PR，并通过 Merge Commit 合并到 `main`；
-3. 在合并后的 `main` 再次执行全部 113 个测试；
-4. 记录 PR、合并提交和 main 回归结果；
-5. 将本计划移入 `docs/plans/completed/`；
-6. 清理本地与远程功能分支；
-7. 确认最终 `main` 工作树 clean 且与 `origin/main` 同步。
+Pull Request #5 已通过 Merge Commit 合并到 `main`：
+
+```text
+4378bda Merge pull request #5 from AmberF1y/feature/F-005-rolling-review
+```
+
+合并后的 `main` 在 Java 21.0.12 和独立 MySQL 9.6 测试库上再次执行：
+
+```text
+.\mvnw.cmd clean test
+```
+
+最终回归结果：
+
+- 编译 47 个生产源码文件和 16 个测试源码文件；
+- Tests run：113；
+- Failures：0；
+- Errors：0；
+- Skipped：0；
+- BUILD SUCCESS；
+- 总耗时 37.602 秒；
+- 测试后本地 `main` 与 `origin/main` 均指向 `4378bda`；
+- 工作区 clean。
+
+最终收尾已完成：
+
+- 本计划移入 `docs/plans/completed/`；
+- 项目状态、README、API 和数据库文档更新为 F-005 Completed；
+- 本地和远程 `feature/F-005-rolling-review` 分支均已清理；
+- 最终 `main` 工作区 clean 并与 `origin/main` 同步。
+
+F-005 满足第 34 节验收标准和第 37 节完成定义，状态更新为 Completed。

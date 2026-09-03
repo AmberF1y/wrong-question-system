@@ -16,21 +16,24 @@
 | F-002 | Completed | 数据库设计、JPA Entity、Repository 与真实 MySQL 集成测试 |
 | F-003 | Completed | 知识点管理业务层、REST API、异常响应与测试 |
 | F-004 | Completed | 错题基础管理业务层、REST API、异常响应与测试 |
-| F-005 | In Progress | 实现提交 `9687337` 已推送并通过本地验收，等待 PR、合并与 main 回归 |
+| F-005 | Completed | 固定规则滚动复习、Flyway 迁移、113 个测试、旧库迁移与手工 API 验收均已完成 |
 
 当前开发分支：
 
 ```text
-feature/F-005-rolling-review
+main
 ```
 
-F-005 从 `main` 的 `bba3122` 开始，正式计划提交为：
+F-005 从 `main` 的 `bba3122` 开始，功能分支提交为：
 
 ```text
 d5187f3 docs: add F-005 rolling review plan
+9687337 feat: implement F-005 rolling review
+a90a653 docs: record F-005 verification status
 ```
 
-F-005 实现代码已在用户真实仓库完成本地测试，实现提交 `9687337` 已推送到远程功能分支。本文件在实际发生前不得填写 PR 或合并提交，也不得把 F-005 标记为 Completed。
+Pull Request #5 已通过 Merge Commit 合并到 `main`，合并提交为
+`4378bda`。合并后的 `main` 已再次通过全部 113 个测试。
 
 ---
 
@@ -367,13 +370,14 @@ F-004 不包含图片上传、OCR、复习、复杂搜索或前端页面。
 
 F-001、F-002、F-003、F-004 均已进入 `main`。F-004 的实现、65 个自动化测试、手工 API 验证、数据库清理、Pull Request 合并和功能分支清理均已完成。
 
-当前正在开发 F-005。功能分支中的实现已在用户本地 Java 21.0.12 与
-MySQL 9.6 环境完成自动化测试、已有开发库迁移和手工 API 验收；实现提交
-`9687337` 已推送，尚待 PR、合并后的 `main` 回归以及分支清理。
+F-005 已完成。实现已在用户本地 Java 21.0.12 与 MySQL 9.6 环境完成
+自动化测试、已有开发库迁移和手工 API 验收，并通过 Pull Request #5
+以 Merge Commit `4378bda` 合并到 `main`。合并后的 `main` 已再次通过
+全部 113 个测试。
 
 ---
 
-## 18. F-005 当前实现与验收状态
+## 18. F-005 完成状态
 
 已写入并通过本地验收：
 
@@ -421,18 +425,22 @@ MySQL 9.6 环境完成自动化测试、已有开发库迁移和手工 API 验�
 - 清理后数量为 `question=0`、`knowledge_point=4`、`relation=0`、
   `state=0`、`history=0`，没有遗留临时业务数据。
 
-Git 提交与推送状态：
+Git 与合并状态：
 
 - 提交前严格核对了 50 个变更路径，没有 F-005 范围外文件；
 - `git diff --cached --check` 通过；
+- 计划提交：`d5187f3 docs: add F-005 rolling review plan`；
 - 实现提交：`9687337 feat: implement F-005 rolling review`；
-- 本地与远程 `feature/F-005-rolling-review` 均指向 `9687337`；
-- 推送后功能分支工作区 clean，且与远程同步。
+- 验证记录提交：`a90a653 docs: record F-005 verification status`；
+- Pull Request：#5；
+- 合并方式：Merge Commit；
+- 合并提交：`4378bda`；
+- 合并后的 `main` 与 `origin/main` 均指向 `4378bda`，工作区 clean；
+- 合并后再次执行 `.\mvnw.cmd clean test`，113 个测试全部通过，
+  `BUILD SUCCESS`，总耗时 37.602 秒；
+- Feature Plan 已归档到 `docs/plans/completed/`；
+- 本地和远程 `feature/F-005-rolling-review` 分支均已清理；
+- 最终 `main` 工作区 clean 并与 `origin/main` 同步。
 
-尚未完成：
-
-1. 提交并推送本次状态文档更新；
-2. 创建 PR 并以 Merge Commit 合并；
-3. 在合并后的 `main` 再次执行全部 113 个测试；
-4. 记录 PR 和合并信息并归档 Feature Plan；
-5. 清理本地与远程功能分支，确认 `main` clean 且与远端同步。
+F-005 的范围、规则、实现、测试、迁移、手工验收、文档、合并和仓库清理
+均已完成。

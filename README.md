@@ -4,10 +4,9 @@
 
 ## 当前代码能力
 
-当前 F-005 功能分支已包含以下实现，并已在本地 Java 21 与 MySQL 9.6
-环境通过自动化测试、旧库迁移和手工 API 验收。实现提交 `9687337` 已推送
-到远程功能分支；功能仍待 PR、合并及合并后的 `main` 回归，因此尚未标记为
-Completed。
+当前 `main` 已包含 F-005，并已在本地 Java 21 与 MySQL 9.6 环境通过
+自动化测试、旧库迁移和手工 API 验收。F-005 通过 Pull Request #5 以
+Merge Commit `4378bda` 合并；合并后的 `main` 已再次通过全部 113 个测试。
 
 - 健康检查；
 - 树形知识点创建、修改、移动和严格删除；
@@ -89,7 +88,7 @@ $env:FLYWAY_BASELINE_ON_MIGRATE = "true"
 Flyway 会把现有 F-004 结构登记为 V1，再执行 V2。迁移成功并核对数据后应立即移除该环境变量。默认配置保持 `baseline-on-migrate=false`。
 
 详细步骤和本次实际迁移记录见
-`docs/plans/active/F-005-rolling-review.md`。当前开发库已完成一次性 baseline
+`docs/plans/completed/F-005-rolling-review.md`。当前开发库已完成一次性 baseline
 和 V2 迁移；其他已有数据库仍必须各自执行上述接管流程。
 
 ## 复习 API
