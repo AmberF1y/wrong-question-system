@@ -4,6 +4,12 @@ import com.wrongquestion.backend.knowledge.entity.KnowledgePoint;
 import com.wrongquestion.backend.knowledge.repository.KnowledgePointRepository;
 import com.wrongquestion.backend.question.entity.Question;
 import com.wrongquestion.backend.question.repository.QuestionRepository;
+import com.wrongquestion.backend.review.entity.QuestionReviewState;
+import com.wrongquestion.backend.review.entity.ReviewRating;
+import com.wrongquestion.backend.review.entity.ReviewRecord;
+import com.wrongquestion.backend.review.entity.ReviewStatus;
+import com.wrongquestion.backend.review.repository.QuestionReviewStateRepository;
+import com.wrongquestion.backend.review.repository.ReviewRecordRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +20,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -49,10 +59,19 @@ class QuestionControllerTest {
     private QuestionRepository questionRepository;
 
     @Autowired
+    private QuestionReviewStateRepository reviewStateRepository;
+
+    @Autowired
+    private ReviewRecordRepository reviewRecordRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private Clock clock;
 
     @Test
     void shouldCreateQuestionThenReturnCompleteDetail() throws Exception {
@@ -83,7 +102,11 @@ class QuestionControllerTest {
                 .andExpect(jsonPath("$.knowledgePoints[1].id")
                         .value(leaf.getId()))
                 .andExpect(jsonPath("$.createdTime", notNullValue()))
-                .andExpect(jsonPath("$.updatedTime", notNullValue()));
+                .andExpect(jsonPath("$.updatedTime", notNullValue()))
+                .andExpect(jsonPath("$.reviewStatus").value("ACTIVE"))
+                .andExpect(jsonPath("$.nextReviewDate", notNullValue()))
+                .andExpect(jsonPath("$.consecutiveProficientCount").value(0))
+                .andExpect(jsonPath("$.lastReviewedAt").value(nullValue()));
 
         Question savedQuestion = questionRepository.findAllBySubject(root.getName())
                 .stream()
@@ -95,7 +118,8 @@ class QuestionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(savedQuestion.getId()))
                 .andExpect(jsonPath("$.subject").value(root.getName()))
-                .andExpect(jsonPath("$.knowledgePoints", hasSize(2)));
+                .andExpect(jsonPath("$.knowledgePoints", hasSize(2)))
+                .andExpect(jsonPath("$.reviewStatus").value("ACTIVE"));
     }
 
     @Test
@@ -121,6 +145,8 @@ class QuestionControllerTest {
                 .andExpect(jsonPath("$.items[0].analysis").doesNotExist())
                 .andExpect(jsonPath("$.items[0].errorReason").doesNotExist())
                 .andExpect(jsonPath("$.items[0].imagePath").doesNotExist())
+                .andExpect(jsonPath("$.items[0].reviewStatus").value("ACTIVE"))
+                .andExpect(jsonPath("$.items[0].nextReviewDate", notNullValue()))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(2));
 
@@ -145,6 +171,67 @@ class QuestionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", empty()))
                 .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void shouldFilterQuestionPageByReviewStatusAndSubject() throws Exception {
+        KnowledgePoint computerRoot = saveKnowledgePoint(
+                uniqueName("F005科目408"),
+                null
+        );
+        KnowledgePoint computerLeaf = saveKnowledgePoint(
+                uniqueName("F005知识408"),
+                computerRoot
+        );
+        KnowledgePoint mathRoot = saveKnowledgePoint(
+                uniqueName("F005科目数学"),
+                null
+        );
+        KnowledgePoint mathLeaf = saveKnowledgePoint(
+                uniqueName("F005知识数学"),
+                mathRoot
+        );
+        Question active = saveQuestion(
+                uniqueName("F005活动题"),
+                computerRoot,
+                computerLeaf
+        );
+        Question masteredComputer = saveQuestion(
+                uniqueName("F005掌握408"),
+                computerRoot,
+                computerLeaf
+        );
+        Question masteredMath = saveQuestion(
+                uniqueName("F005掌握数学"),
+                mathRoot,
+                mathLeaf
+        );
+        master(masteredComputer.getId());
+        master(masteredMath.getId());
+
+        mockMvc.perform(get("/api/questions")
+                        .param("reviewStatus", "MASTERED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(2)))
+                .andExpect(jsonPath("$.items[0].id")
+                        .value(masteredMath.getId()))
+                .andExpect(jsonPath("$.items[1].id")
+                        .value(masteredComputer.getId()));
+
+        mockMvc.perform(get("/api/questions")
+                        .param("subject", computerRoot.getName())
+                        .param("reviewStatus", "MASTERED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].id")
+                        .value(masteredComputer.getId()));
+
+        mockMvc.perform(get("/api/questions")
+                        .param("reviewStatus", "UNKNOWN"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+
+        assertTrue(reviewStateRepository.existsById(active.getId()));
     }
 
     @Test
@@ -199,12 +286,17 @@ class QuestionControllerTest {
         Long knowledgePointId = leaf.getId();
 
         assertEquals(1, relationCount(questionId));
+        assertTrue(reviewStateRepository.existsById(questionId));
+
+        entityManager.flush();
+        entityManager.clear();
 
         mockMvc.perform(delete("/api/questions/{id}", questionId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("错题删除成功"));
 
         assertFalse(questionRepository.existsById(questionId));
+        assertFalse(reviewStateRepository.existsById(questionId));
         assertEquals(0, relationCount(questionId));
         assertTrue(knowledgePointRepository.existsById(knowledgePointId));
     }
@@ -353,6 +445,10 @@ class QuestionControllerTest {
         Arrays.stream(knowledgePoints).forEach(question::addKnowledgePoint);
         Question savedQuestion = questionRepository.saveAndFlush(question);
         entityManager.refresh(savedQuestion);
+        reviewStateRepository.saveAndFlush(new QuestionReviewState(
+                savedQuestion,
+                LocalDate.now(clock).plusDays(1)
+        ));
         assertNotNull(savedQuestion.getCreatedTime());
         return savedQuestion;
     }
@@ -368,6 +464,77 @@ class QuestionControllerTest {
                 questionId
         );
         return count == null ? 0 : count;
+    }
+
+    @Test
+    void shouldPreserveReviewProgressAndHistoryWhenQuestionIsUpdated()
+            throws Exception {
+        KnowledgePoint root = saveKnowledgePoint(uniqueName("F005保留科目"), null);
+        KnowledgePoint leaf = saveKnowledgePoint(uniqueName("F005保留知识"), root);
+        Question question = saveQuestion(uniqueName("F005保留进度题"), root, leaf);
+        QuestionReviewState state = reviewStateRepository
+                .findById(question.getId())
+                .orElseThrow();
+        LocalDate nextReviewDate = LocalDate.now(clock).plusDays(14);
+        Instant reviewedAt = clock.instant().truncatedTo(ChronoUnit.MICROS);
+        state.applyEvaluation(
+                ReviewStatus.ACTIVE,
+                nextReviewDate,
+                1,
+                reviewedAt
+        );
+        reviewStateRepository.saveAndFlush(state);
+        reviewRecordRepository.saveAndFlush(ReviewRecord.evaluation(
+                question,
+                ReviewRating.PROFICIENT,
+                LocalDate.now(clock),
+                reviewedAt,
+                LocalDate.now(clock),
+                ReviewStatus.ACTIVE,
+                nextReviewDate,
+                1
+        ));
+
+        mockMvc.perform(put("/api/questions/{id}", question.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(questionJson(
+                                uniqueName("F005修改内容"),
+                                leaf.getId()
+                        )))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reviewStatus").value("ACTIVE"))
+                .andExpect(jsonPath("$.nextReviewDate")
+                        .value(nextReviewDate.toString()))
+                .andExpect(jsonPath("$.consecutiveProficientCount").value(1))
+                .andExpect(jsonPath("$.lastReviewedAt")
+                        .value(reviewedAt.toString()));
+
+        entityManager.flush();
+        entityManager.clear();
+        QuestionReviewState preserved = reviewStateRepository
+                .findById(question.getId())
+                .orElseThrow();
+        assertEquals(ReviewStatus.ACTIVE, preserved.getReviewStatus());
+        assertEquals(nextReviewDate, preserved.getNextReviewDate());
+        assertEquals(1, preserved.getConsecutiveProficientCount());
+        assertEquals(reviewedAt, preserved.getLastReviewedAt());
+        assertEquals(
+                1,
+                reviewRecordRepository.countByQuestion_Id(question.getId())
+        );
+    }
+
+    private void master(Long questionId) {
+        QuestionReviewState state = reviewStateRepository
+                .findById(questionId)
+                .orElseThrow();
+        state.applyEvaluation(
+                ReviewStatus.MASTERED,
+                null,
+                2,
+                clock.instant()
+        );
+        reviewStateRepository.saveAndFlush(state);
     }
 
     private String uniqueName(String prefix) {

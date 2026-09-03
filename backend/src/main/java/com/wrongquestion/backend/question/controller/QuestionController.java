@@ -6,6 +6,7 @@ import com.wrongquestion.backend.question.dto.QuestionDetailResponse;
 import com.wrongquestion.backend.question.dto.QuestionPageResponse;
 import com.wrongquestion.backend.question.dto.UpdateQuestionRequest;
 import com.wrongquestion.backend.question.service.QuestionService;
+import com.wrongquestion.backend.review.entity.ReviewStatus;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,9 +48,10 @@ public class QuestionController {
     public QuestionPageResponse getPage(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String subject
+            @RequestParam(required = false) String subject,
+            @RequestParam(required = false) ReviewStatus reviewStatus
     ) {
-        return questionService.getPage(page, size, subject);
+        return questionService.getPage(page, size, subject, reviewStatus);
     }
 
     @PutMapping("/{id}")

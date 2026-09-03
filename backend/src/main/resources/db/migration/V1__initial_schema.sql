@@ -1,10 +1,5 @@
-USE wrong_question_system;
-
-
--- =========================================================
--- 1. question
--- 保存错题核心信息
--- =========================================================
+-- F-001 to F-004 schema baseline.
+-- This migration intentionally does not select or create a database.
 
 CREATE TABLE `question` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '错题主键',
@@ -35,11 +30,6 @@ DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci
 COMMENT = '错题表';
 
-
--- =========================================================
--- 2. knowledge_point
--- 保存结构化知识树
--- =========================================================
 
 CREATE TABLE `knowledge_point` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '知识点主键',
@@ -76,11 +66,6 @@ DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_unicode_ci
 COMMENT = '知识点表';
 
-
--- =========================================================
--- 3. question_knowledge_point
--- 保存错题与知识点之间的多对多关系
--- =========================================================
 
 CREATE TABLE `question_knowledge_point` (
     `question_id` BIGINT NOT NULL COMMENT '错题ID',

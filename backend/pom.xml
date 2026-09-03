@@ -54,6 +54,20 @@
         </dependency>
 
 
+        <!-- Flyway：应用启动时按版本执行数据库迁移 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+
+
+        <!-- Flyway MySQL模块：让Flyway识别并迁移MySQL数据库 -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+
+
         <!-- MySQL数据库驱动：让Java连接MySQL -->
         <dependency>
             <groupId>com.mysql</groupId>

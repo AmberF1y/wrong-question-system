@@ -2,12 +2,12 @@
 
 ## 1. 文档状态
 
-- 当前版本：F-004
+- 当前版本：F-005 功能分支实现已通过本地验收，待合并
 - 基础路径：`/api`
 - 数据格式：JSON
-- 当前范围：健康检查、知识点管理与错题基础管理
+- 当前范围：健康检查、知识点管理、错题管理与固定规则滚动复习
 
-本文件记录已经确认并进入实现的 API，不记录未开始的复习、图片上传或 OCR 接口。
+本文件记录已经确认并进入实现的 API，不记录图片上传、OCR、Dashboard 或自适应复习接口。
 
 ---
 
@@ -437,3 +437,145 @@ F-004 不提供：
 - 图片上传；
 - OCR；
 - 复习、统计和前端页面。
+
+---
+
+## 19. F-005 错题响应扩展
+
+创建、详情、修改响应以及分页中的每个错题摘要统一增加：
+
+```json
+{
+  "reviewStatus": "ACTIVE",
+  "nextReviewDate": "2026-09-04",
+  "consecutiveProficientCount": 0,
+  "lastReviewedAt": null
+}
+```
+
+`reviewStatus` 只可能是 `ACTIVE` 或 `MASTERED`。`MASTERED` 的 `nextReviewDate` 为 `null`。
+
+错题分页增加可选 `reviewStatus` 参数，可与 `subject` 组合：
+
+```http
+GET /api/questions?page=0&size=20&subject=408&reviewStatus=MASTERED
+```
+
+仍保持 `question.id DESC` 排序。非法状态枚举返回 `400 VALIDATION_FAILED`。
+
+---
+
+## 20. 获取下一道待复习题
+
+### GET `/api/reviews/due/next`
+
+可选按科目精确筛选：
+
+```http
+GET /api/reviews/due/next?subject=408
+```
+
+有待复习题：
+
+```json
+{
+  "dueCount": 3,
+  "question": {
+    "id": 42,
+    "questionText": "题目内容",
+    "imagePath": null,
+    "subject": "408",
+    "nextReviewDate": "2026-09-01"
+  }
+}
+```
+
+没有待复习题：
+
+```json
+{
+  "dueCount": 0,
+  "question": null
+}
+```
+
+规则：
+
+- 只选择 `ACTIVE` 且 `nextReviewDate <= 今天` 的题；
+- `dueCount` 包含本次返回的当前题；
+- 最早到期优先，同日按题目 ID 升序；
+- `subject` 去除首尾空白后精确匹配，空白返回 400；
+- 每次动态查询当前第一题，不保存会话或题单快照；
+- 响应不暴露知识点、错误答案、正确答案、解析和错误原因。
+
+---
+
+## 21. 提交复习评价
+
+### POST `/api/reviews/{questionId}/evaluations`
+
+```json
+{
+  "rating": "BASICALLY_MASTERED"
+}
+```
+
+允许的评价：
+
+```text
+NOT_KNOWN
+FUZZY
+BASICALLY_MASTERED
+PROFICIENT
+```
+
+成功状态：`200 OK`
+
+```json
+{
+  "questionId": 42,
+  "eventType": "EVALUATION",
+  "rating": "BASICALLY_MASTERED",
+  "occurredAt": "2026-09-03T10:20:30Z",
+  "reviewStatus": "ACTIVE",
+  "nextReviewDate": "2026-09-10",
+  "consecutiveProficientCount": 0,
+  "lastReviewedAt": "2026-09-03T10:20:30Z"
+}
+```
+
+只有当前已到期或逾期的 `ACTIVE` 题允许评价。响应不自动携带下一题，客户端应再次调用待复习接口。
+
+---
+
+## 22. 重新加入复习
+
+### POST `/api/reviews/{questionId}/reactivate`
+
+请求不需要 JSON body。仅 `MASTERED` 题允许操作。
+
+成功后：
+
+- 状态变为 `ACTIVE`；
+- 下一次复习日期为当天；
+- 连续熟练次数归零；
+- `lastReviewedAt` 保持不变；
+- 写入 `REACTIVATION` 历史。
+
+成功响应与评价响应结构相同，其中 `eventType` 为 `REACTIVATION`、`rating` 为 `null`。
+
+---
+
+## 23. F-005 复习错误码
+
+| 场景 | HTTP 状态 | code |
+| --- | ---: | --- |
+| rating 为空、subject 空白、查询枚举非法 | 400 | `VALIDATION_FAILED` |
+| JSON 损坏或 rating 枚举不存在 | 400 | `MALFORMED_REQUEST_BODY` |
+| 错题不存在 | 404 | `QUESTION_NOT_FOUND` |
+| 活动题尚未到期 | 409 | `REVIEW_NOT_DUE` |
+| 已掌握题提交普通评价 | 409 | `REVIEW_ALREADY_MASTERED` |
+| 活动题执行重新加入 | 409 | `REVIEW_NOT_MASTERED` |
+| 并发请求持有过期版本 | 409 | `REVIEW_CONCURRENT_MODIFICATION` |
+
+F-005 不提供复习历史查询、批量评价、撤销评价或专门的查看答案接口。
