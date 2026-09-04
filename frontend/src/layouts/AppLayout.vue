@@ -14,6 +14,10 @@
         class="app-navigation"
         router
       >
+        <el-menu-item index="/reviews">
+          <el-icon><Calendar /></el-icon>
+          <span>每日复习</span>
+        </el-menu-item>
         <el-menu-item index="/questions">
           <el-icon><Notebook /></el-icon>
           <span>错题管理</span>
@@ -49,7 +53,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Collection, Notebook } from '@element-plus/icons-vue'
+import { Calendar, Collection, Notebook } from '@element-plus/icons-vue'
 import { RouterView, useRoute } from 'vue-router'
 import { getHealth } from '../api/health'
 
@@ -59,9 +63,15 @@ const route = useRoute()
 const healthState = ref<HealthState>('checking')
 
 const activeMenu = computed(() => {
-  return route.path.startsWith('/knowledge-points')
-    ? '/knowledge-points'
-    : '/questions'
+  if (route.path.startsWith('/reviews')) {
+    return '/reviews'
+  }
+
+  if (route.path.startsWith('/knowledge-points')) {
+    return '/knowledge-points'
+  }
+
+  return '/questions'
 })
 
 const healthLabel = computed(() => {
