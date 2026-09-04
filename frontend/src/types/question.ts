@@ -1,6 +1,7 @@
 import type { KnowledgePoint } from './knowledge-point'
+import type { ReviewStatus } from './review'
 
-export type ReviewStatus = 'ACTIVE' | 'MASTERED'
+export type { ReviewStatus } from './review'
 
 export interface QuestionFormPayload {
   questionText: string

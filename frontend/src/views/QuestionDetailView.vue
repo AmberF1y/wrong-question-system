@@ -3,8 +3,34 @@
     <AppPageHeader title="错题详情">
       <template #actions>
         <el-button @click="router.push('/questions')">返回列表</el-button>
-        <el-button v-if="question" type="primary" :icon="Edit" @click="openEdit">
+        <el-button
+          v-if="reactivationSucceeded && question?.reviewStatus === 'ACTIVE'"
+          type="success"
+          plain
+          data-testid="go-to-daily-review"
+          @click="router.push('/reviews')"
+        >
+          前往每日复习
+        </el-button>
+        <el-button
+          v-if="question"
+          type="primary"
+          :icon="Edit"
+          :disabled="reactivating"
+          @click="openEdit"
+        >
           修改
+        </el-button>
+        <el-button
+          v-if="question?.reviewStatus === 'MASTERED'"
+          type="warning"
+          plain
+          :loading="reactivating"
+          :disabled="deleting"
+          data-testid="reactivate-question"
+          @click="reactivateReview"
+        >
+          重新加入复习
         </el-button>
         <el-button
           v-if="question"
@@ -12,6 +38,7 @@
           plain
           :icon="Delete"
           :loading="deleting"
+          :disabled="reactivating"
           @click="removeQuestion"
         >
           删除
@@ -30,6 +57,26 @@
       <template #default>
         <el-button link type="primary" @click="loadQuestion">重新加载</el-button>
       </template>
+    </el-alert>
+
+    <el-alert
+      v-if="reactivationUncertainMessage"
+      title="重新加入结果暂时无法确认"
+      type="warning"
+      show-icon
+      :closable="false"
+      class="page-alert"
+      data-testid="reactivation-uncertain"
+    >
+      <p class="uncertain-copy">{{ reactivationUncertainMessage }}</p>
+      <el-button
+        link
+        type="primary"
+        data-testid="sync-question-detail"
+        @click="syncQuestionAfterUncertain"
+      >
+        重新加载详情并核对状态
+      </el-button>
     </el-alert>
 
     <el-skeleton v-if="loading" :rows="10" animated />
@@ -121,11 +168,16 @@ import { Delete, Edit } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import { deleteQuestion, getQuestion } from '../api/questions'
+import { reactivateQuestion } from '../api/reviews'
 import AppEmptyState from '../components/AppEmptyState.vue'
 import AppPageHeader from '../components/AppPageHeader.vue'
 import ReviewStatusTag from '../components/ReviewStatusTag.vue'
 import type { QuestionDetail } from '../types/question'
-import { isNotFoundError, normalizeApiError } from '../utils/api-error'
+import {
+  isNotFoundError,
+  isResponseUnavailableError,
+  normalizeApiError,
+} from '../utils/api-error'
 import { formatDate, formatDateTime } from '../utils/date-time'
 
 const DetailSection = defineComponent({
@@ -148,6 +200,9 @@ const router = useRouter()
 const question = ref<QuestionDetail>()
 const loading = ref(true)
 const deleting = ref(false)
+const reactivating = ref(false)
+const reactivationSucceeded = ref(false)
+const reactivationUncertainMessage = ref('')
 const notFound = ref(false)
 const pageError = ref('')
 const questionId = Number(route.params.id)
@@ -212,12 +267,85 @@ async function removeQuestion(): Promise<void> {
   }
 }
 
+async function reactivateReview(): Promise<void> {
+  if (!question.value || question.value.reviewStatus !== 'MASTERED' || reactivating.value) {
+    return
+  }
+
+  reactivating.value = true
+
+  try {
+    await ElMessageBox.confirm(
+      '重新加入后，题目将改回复习中，下次复习日期设为今天并立即进入今日队列；系统会记录一次重新加入事件。',
+      '重新加入复习',
+      {
+        confirmButtonText: '确认重新加入',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+  } catch {
+    reactivating.value = false
+    return
+  }
+
+  reactivationUncertainMessage.value = ''
+
+  try {
+    const result = await reactivateQuestion(questionId)
+
+    if (result.questionId !== questionId || result.eventType !== 'REACTIVATION') {
+      throw new Error('服务器返回的重新加入结果与当前错题不一致')
+    }
+
+    question.value = {
+      ...question.value,
+      reviewStatus: result.reviewStatus,
+      nextReviewDate: result.nextReviewDate,
+      consecutiveProficientCount: result.consecutiveProficientCount,
+      lastReviewedAt: result.lastReviewedAt,
+    }
+    reactivationSucceeded.value = true
+    ElMessage.success('错题已重新加入今日复习队列')
+    await loadQuestion()
+  } catch (error) {
+    if (isResponseUnavailableError(error)) {
+      reactivationUncertainMessage.value =
+        '请求可能已经在服务器提交成功，系统不会自动重发操作。'
+      return
+    }
+
+    const normalized = normalizeApiError(error)
+    ElMessage.error(normalized.message)
+
+    if (normalized.status === 404 || normalized.status === 409) {
+      await loadQuestion()
+    }
+  } finally {
+    reactivating.value = false
+  }
+}
+
+async function syncQuestionAfterUncertain(): Promise<void> {
+  reactivationUncertainMessage.value = ''
+  await loadQuestion()
+
+  if (question.value?.reviewStatus === 'ACTIVE') {
+    reactivationSucceeded.value = true
+  }
+}
+
 onMounted(loadQuestion)
 </script>
 
 <style scoped>
 .page-alert {
   margin-bottom: 18px;
+}
+
+.uncertain-copy {
+  margin: 0 0 8px;
+  line-height: 1.6;
 }
 
 .detail-grid {

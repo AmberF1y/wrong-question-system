@@ -13,6 +13,12 @@ const router = createRouter({
           redirect: '/questions',
         },
         {
+          path: 'reviews',
+          name: 'daily-review',
+          component: () => import('../views/DailyReviewView.vue'),
+          meta: { title: '每日复习' },
+        },
+        {
           path: 'questions',
           name: 'question-list',
           component: () => import('../views/QuestionListView.vue'),

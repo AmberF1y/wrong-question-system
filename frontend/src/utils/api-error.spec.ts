@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { isNotFoundError, normalizeApiError } from './api-error'
+import {
+  isNotFoundError,
+  isResponseUnavailableError,
+  normalizeApiError,
+} from './api-error'
 
 function axiosError(status?: number, data?: unknown): unknown {
   return {
@@ -58,5 +62,11 @@ describe('normalizeApiError', () => {
   it('recognizes a 404 response', () => {
     expect(isNotFoundError(axiosError(404, { status: 404 }))).toBe(true)
     expect(isNotFoundError(axiosError(409, { status: 409 }))).toBe(false)
+  })
+
+  it('distinguishes an unavailable response from an HTTP error response', () => {
+    expect(isResponseUnavailableError(axiosError())).toBe(true)
+    expect(isResponseUnavailableError(axiosError(500))).toBe(false)
+    expect(isResponseUnavailableError(new Error('local error'))).toBe(false)
   })
 })

@@ -66,3 +66,7 @@ export function isNotFoundError(error: unknown): boolean {
   const normalized = normalizeApiError(error)
   return normalized.status === 404
 }
+
+export function isResponseUnavailableError(error: unknown): boolean {
+  return axios.isAxiosError(error) && !error.response
+}
