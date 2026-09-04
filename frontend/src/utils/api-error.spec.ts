@@ -64,9 +64,11 @@ describe('normalizeApiError', () => {
     expect(isNotFoundError(axiosError(409, { status: 409 }))).toBe(false)
   })
 
-  it('distinguishes an unavailable response from an HTTP error response', () => {
+  it('treats unavailable and 5xx responses as uncertain while preserving client errors', () => {
     expect(isResponseUnavailableError(axiosError())).toBe(true)
-    expect(isResponseUnavailableError(axiosError(500))).toBe(false)
+    expect(isResponseUnavailableError(axiosError(500))).toBe(true)
+    expect(isResponseUnavailableError(axiosError(503))).toBe(true)
+    expect(isResponseUnavailableError(axiosError(409))).toBe(false)
     expect(isResponseUnavailableError(new Error('local error'))).toBe(false)
   })
 })

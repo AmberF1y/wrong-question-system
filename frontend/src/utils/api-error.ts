@@ -68,5 +68,8 @@ export function isNotFoundError(error: unknown): boolean {
 }
 
 export function isResponseUnavailableError(error: unknown): boolean {
-  return axios.isAxiosError(error) && !error.response
+  return (
+    axios.isAxiosError(error) &&
+    (!error.response || error.response.status >= 500)
+  )
 }

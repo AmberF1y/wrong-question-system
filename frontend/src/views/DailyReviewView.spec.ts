@@ -242,7 +242,7 @@ describe('DailyReviewView', () => {
     await flushPromises()
   })
 
-  it('does not retry an evaluation without a response and safely synchronizes changed progress', async () => {
+  it('does not retry an evaluation after a proxy 500 and safely synchronizes changed progress', async () => {
     mockedGetNextDue.mockResolvedValue(dueResponse)
     mockedGetQuestion
       .mockResolvedValueOnce(questionDetail)
@@ -252,7 +252,7 @@ describe('DailyReviewView', () => {
         consecutiveProficientCount: 0,
         lastReviewedAt: '2026-09-04T02:00:00Z',
       })
-    mockedSubmitEvaluation.mockRejectedValue(axiosError())
+    mockedSubmitEvaluation.mockRejectedValue(axiosError(500))
     const wrapper = mountView()
     await flushPromises()
     await revealAnswer(wrapper)
