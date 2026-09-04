@@ -1,0 +1,89 @@
+:root {
+  font-family:
+    Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1f2937;
+  background: #f4f7fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --app-navy: #172b4d;
+  --app-blue: #2563eb;
+  --app-blue-soft: #eaf2ff;
+  --app-border: #dce4ef;
+  --app-muted: #64748b;
+  --app-surface: #ffffff;
+  --app-background: #f4f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.035), transparent 36%),
+    var(--app-background);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.page-card {
+  border: 1px solid var(--app-border) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 30px rgba(23, 43, 77, 0.055) !important;
+}
+
+.content-prose {
+  color: #334155;
+  font-size: 1rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.muted-text {
+  color: var(--app-muted);
+}
+
+.toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (max-width: 760px) {
+  .el-message-box {
+    width: calc(100vw - 32px) !important;
+  }
+
+  .page-card > .el-card__body {
+    padding: 18px;
+  }
+}
