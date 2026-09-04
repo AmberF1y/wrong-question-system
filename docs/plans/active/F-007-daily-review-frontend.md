@@ -6,7 +6,7 @@
 | --- | --- |
 | Feature ID | F-007 |
 | Feature 名称 | 每日复习前端闭环 |
-| 状态 | In Progress |
+| 状态 | Verification Complete / Awaiting PR |
 | 规划日期 | 2026-09-04 |
 | 规划基线 | `main@6e466ee` |
 | 完整基线提交 | `6e466eee0039b66a72a03246203fc37ea1687233` |
@@ -1613,3 +1613,75 @@ M  docs/project-status.md
 - main clean 且与 origin/main 同步。
 
 在以上条件满足前，`docs/project-status.md` 不得把 F-007 标记为 Completed。
+
+## 37. 实际实现与验证记录
+
+### 37.1 当前阶段
+
+F-007 的功能分支实现、自动化回归、真实浏览器验收和临时数据清理均已完成。
+计划仍保留在 `active`，因为 PR、Merge Commit、合并后的 `main` 回归、计划归档
+和功能分支清理尚未完成。当前状态不是 Completed。
+
+### 37.2 实际实现
+
+- 新增 review 类型、API、`/reviews` 路由和“每日复习”导航；
+- 实现动态队列、科目筛选、按需加载答案、四级评价、结果和手动下一题；
+- 实现加载、空状态、404、409、断线、无响应和代理 5xx 恢复；
+- 扩展错题详情页，提供已掌握错题重新加入确认和每日复习入口；
+- 未增加 review Pinia Store，也未在前端计算调度日期；
+- 未修改 Java、Flyway、数据库结构或后端 API 契约。
+
+实际提交：
+
+```text
+e803f19 docs: add F-007 daily review frontend plan
+12a911b feat: add F-007 daily review frontend
+de3858c fix: handle uncertain review evaluation responses
+```
+
+### 37.3 自动化回归
+
+- 后端：113 个测试通过，0 failure、0 error、0 skipped；
+- 前端：11 个测试文件、63 个测试通过；
+- 类型检查和 Vite 生产构建通过，共转换 1719 个模块；
+- 主入口 chunk 大于 500 kB 的提示为非阻塞性能警告。
+
+日志 SHA-256：
+
+- 后端：`a8f94a99b031c05e0978e35e83b11329bb34f0c05fffcab6f81fe9b63f66a6f7`；
+- 前端测试：`92329c2562d9eb66c776f383e700a8378a7ba3281d5b3fd7393b1ed018a34c5f`；
+- 前端构建：`e912b469b4a4b12cbd47303ff25143df36dc3195c50472`。
+
+### 37.4 浏览器验收
+
+主验收覆盖正常队列、筛选、按需答案、四级评价、动态数量、空队列、连续两次
+熟练进入 `MASTERED`、未到期排除、404、两标签页 409 和重新加入。
+
+补充验收覆盖队列与答案断线恢复、Vite 代理 500 下的不确定评价、禁止自动重发、
+通过 GET 同步服务器状态，以及重新加入确认框点击取消后状态不变。
+
+真实验收发现 Vite 代理可能把后端断开转换为 HTTP 500。原判断只识别 Axios
+无响应，会重新开放评价按钮并产生重复 POST 风险。`de3858c` 将无响应和 5xx
+均归入不确定状态，自动化测试和真实浏览器复验均通过。
+
+### 37.5 数据清理与证据
+
+两轮验收清理后数据库均恢复为 `knowledge_point=4`，其余四张业务表为 0；
+所有临时 ID、运行标记和目标历史数量均为 0。
+
+关键证据 SHA-256：
+
+- 主验收清理：`318d90251ec555d0e0ac43aeb66fa146c237d35165d8bda5cfad904e5fff4b30`；
+- 不确定同步与取消确认：`4f9b233c841ff238eab30d4ae89da4508814049ecea39af877f8a57aa3e92bd5`；
+- 补充验收清理：`65e1ddbe89317dfbbae517826c8ceac08c19e2eca0469f4c6e4dd33253ae249f`。
+
+完整证据位于仓库外的 `F007-20260905-014330-ba0ba4` 和
+`F007-RECOVERY-20260905-034121` 目录。证据保留，数据库临时数据已删除。
+
+### 37.6 剩余工作
+
+- 提交并推送验证文档；
+- 创建并核对 PR，使用 Merge Commit 合并；
+- 在合并后的 `main` 重跑全部前后端验证；
+- 归档本计划并记录最终事实；
+- 删除功能分支并确认 `main` 与远端同步。
