@@ -17,12 +17,12 @@
 | F-003 | Completed | 知识点管理业务层、REST API、异常响应与测试 |
 | F-004 | Completed | 错题基础管理业务层、REST API、异常响应与测试 |
 | F-005 | Completed | 固定规则滚动复习、Flyway 迁移、113 个测试、旧库迁移与手工 API 验收均已完成 |
-| F-006 | In Progress | Vue 前端、知识点与错题管理、24 个前端测试、生产构建、浏览器验收、后端回归和数据清理均已完成；等待 PR 合并与合并后回归 |
+| F-006 | Completed | Vue 前端、知识点与错题管理、24 个前端测试、生产构建、浏览器验收、后端回归、数据清理、PR 合并与合并后回归均已完成 |
 
-当前开发分支：
+当前分支：
 
 ```text
-feature/F-006-frontend-question-management
+main
 ```
 
 F-005 从 `main` 的 `bba3122` 开始，功能分支提交为：
@@ -36,14 +36,21 @@ a90a653 docs: record F-005 verification status
 Pull Request #5 已通过 Merge Commit 合并到 `main`，合并提交为
 `4378bda`。合并后的 `main` 已再次通过全部 113 个测试。
 
-F-006 当前功能分支提交为：
+F-006 功能分支提交为：
 
 ```text
 8362904 docs: add F-006 frontend question management plan
 b76265e feat: add F-006 frontend question management
 ```
 
-两个提交均已推送到远程功能分支；当前等待最终验证文档提交和 Pull Request。
+验证文档提交为：
+
+```text
+d4c12d1 docs: record F-006 verification status
+```
+
+Pull Request #6 已使用 Merge Commit 合并到 `main`，合并提交为
+`7cd5d9b`。合并后的 `main` 已通过全部前后端回归检查。
 
 ---
 
@@ -398,6 +405,11 @@ F-005 已完成。实现已在用户本地 Java 21.0.12 与 MySQL 9.6 环境完�
 以 Merge Commit `4378bda` 合并到 `main`。合并后的 `main` 已再次通过
 全部 113 个测试。
 
+F-006 已完成。Vue 前端实现、24 个前端测试、生产构建、真实浏览器验收、
+临时数据清理和后端 113 个测试回归均已完成，并通过 Pull Request #6 以
+Merge Commit `7cd5d9b` 合并到 `main`。合并后的 `main` 已再次通过前端
+类型检查、24 个前端测试、生产构建和后端 113 个测试。
+
 ---
 
 ## 18. F-005 完成状态
@@ -470,18 +482,18 @@ F-005 的范围、规则、实现、测试、迁移、手工验收、文档、�
 
 ---
 
-## 19. F-006 当前状态
+## 19. F-006 完成状态
 
-F-006 已从 `main@8b8bfd8` 创建功能分支：
+F-006 从 `main@8b8bfd8` 创建功能分支：
 
 ```text
 feature/F-006-frontend-question-management
 ```
 
-正式计划文件为：
+最终计划已归档为：
 
 ```text
-docs/plans/active/F-006-frontend-question-management.md
+docs/plans/completed/F-006-frontend-question-management.md
 ```
 
 F-006 已首次建立 Vue 前端，并在浏览器中提供：
@@ -500,7 +512,7 @@ F-006 没有实现每日复习交互、四级评价、重新加入复习、Dashb
 实现与验证事实：
 
 - 分支从 `main@8b8bfd8` 创建；
-- 计划提交 `8362904` 和实现提交 `b76265e` 已推送；
+- 计划提交 `8362904`、实现提交 `b76265e` 和验证文档提交 `d4c12d1` 已推送；
 - 实现提交新增 `frontend` 下 43 个文件，共 6291 行；
 - `npm run type-check` 通过；
 - `npm run test:unit -- --run`：6 个测试文件、24 个测试全部通过；
@@ -515,5 +527,18 @@ F-006 没有实现每日复习交互、四级评价、重新加入复习、Dashb
 
 浏览器验收中曾发现跨科目知识点校验消息重复显示三次。前端已集中错误来源并补充组件测试，修复后只显示一条消息；最终测试数为 24。
 
-当前仍为 `In Progress`，仅剩：提交本次验证文档、创建并合并 PR、在
-`main` 上重跑前端检查与后端回归、归档计划，以及清理功能分支。
+合并与合并后回归事实：
+
+- Pull Request：#6；
+- 合并方式：Merge Commit；
+- 合并提交：`7cd5d9b`；
+- `main` 与 `origin/main` 均指向 `7cd5d9b`；
+- 合并提交有两个父节点，并包含功能分支最终提交 `d4c12d1`；
+- 合并后 `npm run type-check` 通过；
+- 合并后 6 个前端测试文件、24 个测试全部通过；
+- 合并后生产构建成功，Vite 转换 1703 个模块；
+- 合并后后端 113 个测试全部通过，`BUILD SUCCESS`，总耗时 16.693 秒；
+- 合并后工作区 clean，`main` 与 `origin/main` 同步。
+
+F-006 的范围、实现、自动化测试、浏览器验收、数据清理、文档、PR 合并和
+合并后回归均已完成。本地和远程功能分支均已删除。

@@ -6,16 +6,19 @@
 | --- | --- |
 | Feature ID | F-006 |
 | Feature 名称 | 前端基础与错题管理 |
-| 状态 | In Progress（实现及合并前验收完成，等待 PR） |
+| 状态 | Completed |
 | 规划日期 | 2026-09-04 |
 | 规划基线 | `main@8b8bfd8` |
 | 开发分支 | `feature/F-006-frontend-question-management` |
-| 计划文件 | `docs/plans/active/F-006-frontend-question-management.md` |
+| 计划文件 | `docs/plans/completed/F-006-frontend-question-management.md` |
 | 前置 Feature | F-001～F-005 均已完成并合并到 `main` |
 | 后端基线测试 | 113 个测试全部通过，0 failure、0 error、0 skipped |
 | 本地前端环境 | Node.js 24.18.0、npm 11.16.0 |
 | 计划提交 | `8362904` |
 | 实现提交 | `b76265e` |
+| 验证文档提交 | `d4c12d1` |
+| Pull Request | #6 |
+| 合并提交 | `7cd5d9b` |
 
 用户已确认本地与远程 `main` 均为 `8b8bfd8`、工作区 clean，并已从该提交创建 F-006 功能分支。
 
@@ -1107,16 +1110,28 @@ Flyway 对 MySQL 9.6 高于其已验证的 9.4 版本给出兼容性提示；Moc
 
 ---
 
-## 36. 当前状态与剩余步骤
+## 36. 合并与最终完成状态
 
-完成标准第 1～15 项已经满足。F-006 暂不标记为 `Completed`，因为第 16～17 项
-必须在 PR 合并后执行。
+Pull Request #6 已使用 Merge Commit 合并，合并提交为：
 
-剩余步骤：
+```text
+7cd5d9b Merge pull request #6 from AmberF1y/feature/F-006-frontend-question-management
+```
 
-1. 提交并推送本次最终验证文档；
-2. 创建 Pull Request，记录前端、后端和浏览器验收结果；
-3. 使用 Merge Commit 合并；
-4. 在 `main` 上重新执行前端类型检查、24 个测试、生产构建和后端 113 个测试；
-5. 将本计划移到 `docs/plans/completed/` 并把 F-006 标记为 `Completed`；
-6. 推送最终文档提交，删除本地和远程功能分支，并确认仓库 clean、与远程同步。
+本地 `main` 快进到 `7cd5d9b` 后完成合并后回归：
+
+| 检查 | 结果 |
+| --- | --- |
+| Merge Commit | 2 个父节点，包含 `d4c12d1` |
+| `npm run type-check` | 通过 |
+| 前端测试 | 6 个文件、24 个测试全部通过 |
+| `npm run build` | 成功；Vite 转换 1703 个模块，耗时 512 ms |
+| `.\mvnw.cmd clean test` | 113 个测试通过，0 failure、0 error、0 skipped |
+| 后端构建 | `BUILD SUCCESS`，总耗时 16.693 秒 |
+| Git 状态 | `main` clean，与 `origin/main` 同步 |
+
+构建仍仅有已记录的 Element Plus 主入口块超过 500 kB 提示；后端仍仅有已记录的
+Flyway MySQL 9.6 兼容性提示和 Mockito 动态 Agent 提示，没有新增失败或错误。
+
+完成标准第 1～17 项均已满足。F-006 已标记为 `Completed`，本计划归档到
+`docs/plans/completed/`，本地和远程功能分支均已删除，仓库级清理完成。
