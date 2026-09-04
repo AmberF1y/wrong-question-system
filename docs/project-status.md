@@ -17,7 +17,7 @@
 | F-003 | Completed | 知识点管理业务层、REST API、异常响应与测试 |
 | F-004 | Completed | 错题基础管理业务层、REST API、异常响应与测试 |
 | F-005 | Completed | 固定规则滚动复习、Flyway 迁移、113 个测试、旧库迁移与手工 API 验收均已完成 |
-| F-006 | In Progress | 前端基础、知识点管理页面与错题管理页面；正式计划已确认，尚未编写前端实现代码 |
+| F-006 | In Progress | Vue 前端、知识点与错题管理、24 个前端测试、生产构建、浏览器验收、后端回归和数据清理均已完成；等待 PR 合并与合并后回归 |
 
 当前开发分支：
 
@@ -36,11 +36,20 @@ a90a653 docs: record F-005 verification status
 Pull Request #5 已通过 Merge Commit 合并到 `main`，合并提交为
 `4378bda`。合并后的 `main` 已再次通过全部 113 个测试。
 
+F-006 当前功能分支提交为：
+
+```text
+8362904 docs: add F-006 frontend question management plan
+b76265e feat: add F-006 frontend question management
+```
+
+两个提交均已推送到远程功能分支；当前等待最终验证文档提交和 Pull Request。
+
 ---
 
 ## 3. 项目目标与原则
 
-项目是面向个人学习场景的错题整理与滚动复习系统，同时作为 Java 后端求职展示项目。
+项目是面向个人学习场景的错题整理与滚动复习系统，同时作为 Java / Vue 求职展示项目。
 
 开发原则：
 
@@ -70,6 +79,19 @@ Pull Request #5 已通过 Merge Commit 合并到 `main`，合并提交为
 - Flyway
 - Hibernate `ddl-auto: validate`
 - 独立测试数据库 `wrong_question_system_test`
+
+### 前端
+
+- Node.js 24.18.0
+- npm 11.16.0
+- Vue 3.5
+- TypeScript 6.0
+- Vite 8.2
+- Element Plus 2.14
+- Vue Router 4.6
+- Pinia 4.0
+- Axios 1.20
+- Vitest 5.0、Vue Test Utils 2.5、jsdom 30
 
 ### 当前明确不引入
 
@@ -456,13 +478,13 @@ F-006 已从 `main@8b8bfd8` 创建功能分支：
 feature/F-006-frontend-question-management
 ```
 
-当前已经完成需求和技术计划，正式计划文件为：
+正式计划文件为：
 
 ```text
 docs/plans/active/F-006-frontend-question-management.md
 ```
 
-本阶段目标是首次建立 Vue 前端，并在浏览器中提供：
+F-006 已首次建立 Vue 前端，并在浏览器中提供：
 
 - 应用布局、路由、API 请求和统一错误处理；
 - 后端健康状态；
@@ -472,15 +494,26 @@ docs/plans/active/F-006-frontend-question-management.md
 - 复习状态摘要展示；
 - 前端类型检查、测试、构建和真实后端联调。
 
-F-006 不实现每日复习交互、四级评价、重新加入复习、Dashboard、图片上传、OCR、部署或数据库变更。每日复习前端留给 F-007。
+F-006 没有实现每日复习交互、四级评价、重新加入复习、Dashboard、
+图片上传、OCR、部署或数据库变更。每日复习前端留给 F-007。
 
-计划基线已经由用户在真实本地仓库确认：
+实现与验证事实：
 
-- 本地 `main`：`8b8bfd8`；
-- 远程 `origin/main`：`8b8bfd8`；
-- 工作区 clean；
-- Node.js：24.18.0；
-- npm：11.16.0；
-- F-006 分支从正确基线创建。
+- 分支从 `main@8b8bfd8` 创建；
+- 计划提交 `8362904` 和实现提交 `b76265e` 已推送；
+- 实现提交新增 `frontend` 下 43 个文件，共 6291 行；
+- `npm run type-check` 通过；
+- `npm run test:unit -- --run`：6 个测试文件、24 个测试全部通过；
+- `npm run build` 成功，Vite 共转换 1703 个模块；
+- 真实浏览器验收覆盖健康状态、知识点维护、错题 CRUD、筛选、分页、
+  Validation、409、404、断线与恢复；
+- 分页验收创建 21 道临时题，验证第二页及末项删除自动回页后全部清理；
+- 后端 `clean test`：113 个测试全部通过，0 failure、0 error、0 skipped；
+- 开发库最终计数为 `question=0`、`knowledge_point=4`、
+  `question_knowledge_point=0`、`question_review_state=0`、`review_record=0`；
+- 未修改 Java、Flyway、数据库结构或既有 API 契约。
 
-当前尚未创建 `frontend` 目录，也没有修改 Java、数据库迁移或 API 契约。下一步是在功能分支提交本计划和项目状态，然后初始化 Vue 3 + TypeScript + Vite 工程。
+浏览器验收中曾发现跨科目知识点校验消息重复显示三次。前端已集中错误来源并补充组件测试，修复后只显示一条消息；最终测试数为 24。
+
+当前仍为 `In Progress`，仅剩：提交本次验证文档、创建并合并 PR、在
+`main` 上重跑前端检查与后端回归、归档计划，以及清理功能分支。

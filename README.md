@@ -1,12 +1,13 @@
 # Wrong Question System
 
-面向个人学习场景的错题整理与固定规则滚动复习后端，同时作为 Java 后端工程实践项目。
+面向个人学习场景的错题整理与固定规则滚动复习全栈应用，同时作为 Java / Vue 工程实践项目。
 
 ## 当前代码能力
 
-当前 `main` 已包含 F-005，并已在本地 Java 21 与 MySQL 9.6 环境通过
-自动化测试、旧库迁移和手工 API 验收。F-005 通过 Pull Request #5 以
-Merge Commit `4378bda` 合并；合并后的 `main` 已再次通过全部 113 个测试。
+`main` 基线已包含 F-005，并已在本地 Java 21 与 MySQL 9.6 环境通过
+自动化测试、旧库迁移和手工 API 验收。当前 F-006 功能分支在该基线上
+增加 Vue 前端；前端类型检查、24 个测试、生产构建、真实浏览器验收和
+后端 113 个测试回归均已通过，等待 Pull Request 合并。
 
 - 健康检查；
 - 树形知识点创建、修改、移动和严格删除；
@@ -18,11 +19,19 @@ Merge Commit `4378bda` 合并；合并后的 `main` 已再次通过全部 113 �
 - 复习当前状态与不可变事件历史；
 - 基于 JPA `@Version` 的乐观锁并发保护；
 - Flyway 数据库版本迁移；
-- 独立 MySQL 测试数据库。
+- 独立 MySQL 测试数据库；
+- Vue 桌面端应用布局、导航和后端连接状态；
+- 知识点树的查看、创建、修改、同树移动和严格删除；
+- 错题录入、分页列表、科目与掌握状态筛选、详情、修改和删除；
+- 加载、空数据、404、Validation、409 和连接失败反馈；
+- 复习状态摘要展示。
 
-当前不包含前端、图片上传、OCR、Dashboard、自适应复习算法、用户系统和复习历史查询 API。
+当前不包含每日复习交互、四级评价前端、图片上传、OCR、Dashboard、
+自适应复习算法、用户系统和复习历史查询 API。
 
 ## 技术栈
+
+### 后端
 
 - Java 21
 - Spring Boot 4.1.1
@@ -32,6 +41,16 @@ Merge Commit `4378bda` 合并；合并后的 `main` 已再次通过全部 113 �
 - Flyway
 - Jakarta Bean Validation
 - JUnit 5 / Mockito / MockMvc
+
+### 前端
+
+- Vue 3 + TypeScript
+- Vite
+- Element Plus
+- Vue Router
+- Pinia
+- Axios
+- Vitest / Vue Test Utils / jsdom
 
 ## 数据库初始化
 
@@ -65,7 +84,30 @@ $env:DB_PASSWORD = "<你的本地 MySQL 密码>"
 $env:APP_REVIEW_ZONE_ID = "Asia/Shanghai"
 ```
 
+## 本地运行
+
+先启动 MySQL 和后端：
+
+```powershell
+cd D:\Projects\wrong-question-system\backend
+$env:DB_PASSWORD = "<你的本地 MySQL 密码>"
+.\mvnw.cmd spring-boot:run
+```
+
+再打开另一个 PowerShell 窗口启动前端：
+
+```powershell
+cd D:\Projects\wrong-question-system\frontend
+npm.cmd ci
+npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort
+```
+
+浏览器访问 `http://127.0.0.1:5173/`。Vite 将 `/api` 请求代理到
+`http://localhost:8080`。
+
 ## 运行测试
+
+### 后端
 
 先执行 `sql/create-test-database.sql` 创建空的 `wrong_question_system_test`，再运行：
 
@@ -76,6 +118,18 @@ $env:DB_PASSWORD = "<你的本地 MySQL 密码>"
 ```
 
 测试配置只连接 `wrong_question_system_test`，不应连接日常使用的 `wrong_question_system`。
+
+### 前端
+
+```powershell
+cd D:\Projects\wrong-question-system\frontend
+npm.cmd run type-check
+npm.cmd run test:unit -- --run
+npm.cmd run build
+```
+
+Windows PowerShell 因执行策略阻止 `npm.ps1` 时，使用 `npm.cmd` 即可，
+不需要修改机器级执行策略。
 
 ## 已有开发库首次接入 Flyway
 
