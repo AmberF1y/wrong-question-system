@@ -12,6 +12,18 @@ export interface QuestionFormPayload {
   knowledgePointIds: number[]
 }
 
+export interface QuestionImageChange {
+  file: File | null
+  removeExisting: boolean
+}
+
+export interface QuestionImageResponse {
+  questionId: number
+  imagePath: string
+  contentType: string
+  size: number
+}
+
 export interface QuestionSummary {
   id: number
   questionText: string

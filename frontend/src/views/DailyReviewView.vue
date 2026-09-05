@@ -114,6 +114,7 @@
         :due-count="dueReview?.dueCount ?? 0"
         :loading-answer="phase === 'LOADING_ANSWER'"
         :answer-revealed="Boolean(questionDetail)"
+        :image-url="currentQuestionImageUrl"
         :disabled="phase !== 'QUESTION' && phase !== 'ANSWER_ERROR'"
         @show-answer="loadAnswer"
       />
@@ -192,7 +193,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { getQuestion } from '../api/questions'
+import { getQuestion, getQuestionImageUrl } from '../api/questions'
 import { getNextDueReview, submitReviewEvaluation } from '../api/reviews'
 import AppEmptyState from '../components/AppEmptyState.vue'
 import AppPageHeader from '../components/AppPageHeader.vue'
@@ -261,6 +262,10 @@ let detailRequestSequence = 0
 let evaluationInFlight = false
 
 const currentQuestion = computed(() => dueReview.value?.question ?? null)
+const currentQuestionImageUrl = computed(() => {
+  const question = currentQuestion.value
+  return question?.imagePath ? getQuestionImageUrl(question.id) : ''
+})
 const emptyDescription = computed(() =>
   selectedSubject.value
     ? `“${selectedSubject.value}”今天没有待复习错题`

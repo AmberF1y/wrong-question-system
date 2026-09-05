@@ -91,6 +91,11 @@
       <section class="detail-main">
         <el-card class="page-card detail-card" shadow="never">
           <DetailSection title="题目" :content="question.questionText" />
+          <QuestionImageDisplay
+            v-if="question.imagePath"
+            :src="questionImageUrl"
+            class="detail-question-image"
+          />
           <DetailSection title="我的错误答案" :content="question.wrongAnswer" tone="danger" />
           <DetailSection title="正确答案" :content="question.correctAnswer" tone="success" />
           <DetailSection title="解析" :content="question.analysis" />
@@ -163,14 +168,15 @@
 </template>
 
 <script setup lang="ts">
-import { defineComponent, h, onMounted, ref } from 'vue'
+import { computed, defineComponent, h, onMounted, ref } from 'vue'
 import { Delete, Edit } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
-import { deleteQuestion, getQuestion } from '../api/questions'
+import { deleteQuestion, getQuestion, getQuestionImageUrl } from '../api/questions'
 import { reactivateQuestion } from '../api/reviews'
 import AppEmptyState from '../components/AppEmptyState.vue'
 import AppPageHeader from '../components/AppPageHeader.vue'
+import QuestionImageDisplay from '../components/QuestionImageDisplay.vue'
 import ReviewStatusTag from '../components/ReviewStatusTag.vue'
 import type { QuestionDetail } from '../types/question'
 import {
@@ -206,6 +212,13 @@ const reactivationUncertainMessage = ref('')
 const notFound = ref(false)
 const pageError = ref('')
 const questionId = Number(route.params.id)
+
+const questionImageUrl = computed(() => {
+  if (!question.value?.imagePath) {
+    return ''
+  }
+  return getQuestionImageUrl(questionId, question.value.updatedTime)
+})
 
 async function loadQuestion(): Promise<void> {
   pageError.value = ''
@@ -362,6 +375,10 @@ onMounted(loadQuestion)
 
 .detail-card :deep(.el-card__body) {
   padding: 0 26px;
+}
+
+.detail-question-image {
+  margin: 0 0 24px;
 }
 
 :deep(.detail-section) {

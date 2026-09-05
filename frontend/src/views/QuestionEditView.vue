@@ -27,6 +27,7 @@
     <QuestionForm
       v-else-if="initialValue"
       :initial-value="initialValue"
+      :current-image-url="currentImageUrl"
       :knowledge-tree="knowledgeStore.tree"
       :submitting="submitting"
       :field-errors="fieldErrors"
@@ -41,12 +42,22 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
-import { getQuestion, updateQuestion } from '../api/questions'
+import {
+  getQuestion,
+  getQuestionImageUrl,
+  removeQuestionImage,
+  updateQuestion,
+  uploadQuestionImage,
+} from '../api/questions'
 import AppEmptyState from '../components/AppEmptyState.vue'
 import AppPageHeader from '../components/AppPageHeader.vue'
 import QuestionForm from '../components/QuestionForm.vue'
 import { useKnowledgePointStore } from '../stores/knowledge-points'
-import type { QuestionDetail, QuestionFormPayload } from '../types/question'
+import type {
+  QuestionDetail,
+  QuestionFormPayload,
+  QuestionImageChange,
+} from '../types/question'
 import { isNotFoundError, normalizeApiError } from '../utils/api-error'
 
 const route = useRoute()
@@ -74,6 +85,13 @@ const initialValue = computed<QuestionFormPayload | undefined>(() => {
     errorReason: question.value.errorReason,
     knowledgePointIds: question.value.knowledgePoints.map((point) => point.id),
   }
+})
+
+const currentImageUrl = computed(() => {
+  if (!question.value?.imagePath) {
+    return ''
+  }
+  return getQuestionImageUrl(questionId, question.value.updatedTime)
 })
 
 async function loadPage(): Promise<void> {
@@ -104,12 +122,50 @@ async function loadPage(): Promise<void> {
   }
 }
 
-async function saveQuestion(payload: QuestionFormPayload): Promise<void> {
+async function saveQuestion(
+  payload: QuestionFormPayload,
+  imageChange: QuestionImageChange,
+): Promise<void> {
+  if (!question.value) {
+    return
+  }
+
   submitting.value = true
   fieldErrors.value = {}
 
   try {
-    const updated = await updateQuestion(questionId, payload)
+    let updated = question.value
+    let textUpdated = false
+
+    if (!matchesCurrentQuestion(payload, question.value)) {
+      updated = await updateQuestion(questionId, payload)
+      question.value = updated
+      textUpdated = true
+    }
+
+    try {
+      if (imageChange.file) {
+        const uploaded = await uploadQuestionImage(questionId, imageChange.file)
+        question.value = { ...updated, imagePath: uploaded.imagePath }
+      } else if (imageChange.removeExisting) {
+        await removeQuestionImage(questionId)
+        question.value = { ...updated, imagePath: null }
+      }
+    } catch (error) {
+      const action = imageChange.file ? '上传' : '移除'
+      const prefix = textUpdated
+        ? '文字和知识点已保存，但'
+        : ''
+      ElMessage.error(`${prefix}图片${action}失败：${normalizeApiError(error).message}`)
+
+      try {
+        question.value = await getQuestion(questionId)
+      } catch {
+        // 保留已确认成功的文字响应，避免把部分成功误报为整体失败。
+      }
+      return
+    }
+
     ElMessage.success('错题修改成功')
     await router.push(`/questions/${updated.id}`)
   } catch (error) {
@@ -119,6 +175,22 @@ async function saveQuestion(payload: QuestionFormPayload): Promise<void> {
   } finally {
     submitting.value = false
   }
+}
+
+function matchesCurrentQuestion(
+  payload: QuestionFormPayload,
+  current: QuestionDetail,
+): boolean {
+  const currentIds = current.knowledgePoints.map((point) => point.id)
+  return (
+    payload.questionText === current.questionText &&
+    payload.wrongAnswer === current.wrongAnswer &&
+    payload.correctAnswer === current.correctAnswer &&
+    payload.analysis === current.analysis &&
+    payload.errorReason === current.errorReason &&
+    payload.knowledgePointIds.length === currentIds.length &&
+    payload.knowledgePointIds.every((id, index) => id === currentIds[index])
+  )
 }
 
 onMounted(loadPage)

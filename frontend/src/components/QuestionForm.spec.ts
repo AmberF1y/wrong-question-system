@@ -27,6 +27,13 @@ const knowledgeSelectorStub = {
   template: '<div class="knowledge-selector-stub" />',
 }
 
+const questionImageFieldStub = {
+  name: 'QuestionImageField',
+  props: ['currentImageUrl', 'disabled'],
+  emits: ['change'],
+  template: '<div class="question-image-field-stub" />',
+}
+
 function mountForm() {
   return mount(QuestionForm, {
     props: { knowledgeTree: tree },
@@ -34,6 +41,7 @@ function mountForm() {
       plugins: [ElementPlus],
       stubs: {
         KnowledgePointSelector: knowledgeSelectorStub,
+        QuestionImageField: questionImageFieldStub,
       },
     },
   })
@@ -67,6 +75,10 @@ describe('QuestionForm', () => {
           analysis: '解析',
           errorReason: '错误原因',
           knowledgePointIds: [1, 2],
+        },
+        {
+          file: null,
+          removeExisting: false,
         },
       ],
     ])

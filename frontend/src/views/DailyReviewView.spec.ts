@@ -4,7 +4,7 @@ import { createPinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getKnowledgePointTree } from '../api/knowledge-points'
-import { getQuestion } from '../api/questions'
+import { getQuestion, getQuestionImageUrl } from '../api/questions'
 import { getNextDueReview, submitReviewEvaluation } from '../api/reviews'
 import type { QuestionDetail } from '../types/question'
 import type {
@@ -19,6 +19,7 @@ vi.mock('../api/knowledge-points', () => ({
 
 vi.mock('../api/questions', () => ({
   getQuestion: vi.fn(),
+  getQuestionImageUrl: vi.fn(),
 }))
 
 vi.mock('../api/reviews', () => ({
@@ -28,6 +29,7 @@ vi.mock('../api/reviews', () => ({
 
 const mockedGetTree = vi.mocked(getKnowledgePointTree)
 const mockedGetQuestion = vi.mocked(getQuestion)
+const mockedGetQuestionImageUrl = vi.mocked(getQuestionImageUrl)
 const mockedGetNextDue = vi.mocked(getNextDueReview)
 const mockedSubmitEvaluation = vi.mocked(submitReviewEvaluation)
 
@@ -124,6 +126,10 @@ describe('DailyReviewView', () => {
   beforeEach(() => {
     mockedGetTree.mockReset()
     mockedGetQuestion.mockReset()
+    mockedGetQuestionImageUrl.mockReset()
+    mockedGetQuestionImageUrl.mockImplementation(
+      (id) => `/api/questions/${id}/image`,
+    )
     mockedGetNextDue.mockReset()
     mockedSubmitEvaluation.mockReset()
     mockedGetTree.mockResolvedValue([])
@@ -142,6 +148,24 @@ describe('DailyReviewView', () => {
     expect(wrapper.text()).toContain(dueQuestion.questionText)
     expect(wrapper.get('[data-testid="due-count"]').text()).toContain('3 道')
     expect(wrapper.text()).not.toContain(questionDetail.correctAnswer)
+    expect(mockedGetQuestion).not.toHaveBeenCalled()
+  })
+
+  it('shows the due question image before requesting the answer', async () => {
+    mockedGetNextDue.mockResolvedValue({
+      ...dueResponse,
+      question: {
+        ...dueQuestion,
+        imagePath: 'questions/42/generated.png',
+      },
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(mockedGetQuestionImageUrl).toHaveBeenCalledWith(42)
+    expect(wrapper.get('[data-testid="question-image"]').attributes('src')).toBe(
+      '/api/questions/42/image',
+    )
     expect(mockedGetQuestion).not.toHaveBeenCalled()
   })
 
