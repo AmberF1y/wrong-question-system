@@ -4,7 +4,7 @@
 
 本文件只记录项目当前真实状态。已经完成的内容、正在进行的内容和尚未完成的内容必须明确区分。
 
-更新时间：2026-09-05
+更新时间：2026-09-06
 
 ---
 
@@ -19,12 +19,12 @@
 | F-005 | Completed | 固定规则滚动复习、Flyway 迁移、113 个测试、旧库迁移与手工 API 验收均已完成 |
 | F-006 | Completed | Vue 前端、知识点与错题管理、24 个前端测试、生产构建、浏览器验收、后端回归、数据清理、PR 合并与合并后回归均已完成 |
 | F-007 | Completed | 每日复习前端闭环、63 个前端测试、浏览器验收、异常恢复、数据清理、PR 合并与 main 回归均已完成 |
-| F-008 | Ready for PR | 单题单图上传与管理已实现，自动化回归、浏览器验收和临时数据/文件清理均通过，等待 Pull Request |
+| F-008 | Completed | 单题单图上传与管理、自动化回归、浏览器验收、PR 合并、main 回归、计划归档和分支清理均已完成 |
 
 当前分支：
 
 ```text
-feature/F-008-question-image-upload
+main
 ```
 
 F-007 从 `main@6e466ee` 创建功能分支，计划、实现、异常恢复修复和验证文档
@@ -33,11 +33,11 @@ F-007 从 `main@6e466ee` 创建功能分支，计划、实现、异常恢复修�
 已再次通过后端 113 个测试、前端 11 个测试文件共 63 个测试、类型检查和
 生产构建。计划已归档，本地和远端功能分支均已删除。
 
-F-008 从 `main@5716825` 创建功能分支，计划、后端和前端提交依次为
-`b1f2849`、`43b4382`、`737fef8`。功能分支已通过后端 146 个测试、前端
-16 个测试文件共 81 个测试、类型检查、生产构建和真实浏览器验收。验收临时
-错题、复习数据和图片文件已全部清理。验证文档提交、Pull Request、合并后
-`main` 回归、计划归档和分支删除尚未执行。
+F-008 从 `main@5716825` 创建功能分支，计划、后端、前端和验证文档提交依次为
+`b1f2849`、`43b4382`、`737fef8`、`ad9ae43`。Pull Request #8 已使用
+Merge Commit 合并，合并提交为 `b398968`。功能分支和合并后的 `main` 均通过
+后端 146 个测试、前端 16 个测试文件共 81 个测试、类型检查和生产构建；真实
+浏览器验收与临时数据/文件清理通过。计划已归档，本地和远端功能分支均已删除。
 
 F-005 从 `main` 的 `bba3122` 开始，功能分支提交为：
 
@@ -430,10 +430,10 @@ F-007 已完成。每日复习页面、前端 review API、四级评价、异常
 和临时数据清理均通过。Pull Request #7 已使用 Merge Commit `dde0445`
 合并到 `main`，合并后回归通过，计划已归档，本地和远端功能分支均已删除。
 
-F-008 已完成分支内实现与验证。单题单图上传、读取、替换、单独移除、随题
-删除清理、创建部分成功恢复和每日复习按需图片显示均已落地；全量自动化回归、
-真实浏览器验收、后端重启持久化和临时数据/文件清理均通过。当前状态是
-`Ready for PR`，不能在 PR 合并、合并后回归和计划归档前标记为 Completed。
+F-008 已完成。单题单图上传、读取、替换、单独移除、随题删除清理、创建部分
+成功恢复和每日复习按需图片显示均已落地；全量自动化回归、真实浏览器验收、
+后端重启持久化和临时数据/文件清理均通过。Pull Request #8 已合并，合并后
+`main` 回归通过，计划已归档，本地和远端功能分支均已删除。
 
 ---
 
@@ -707,13 +707,13 @@ F-007 最终状态为 Completed。图片上传、OCR、Dashboard、趋势统计�
 
 ---
 
-## 21. F-008 当前状态
+## 21. F-008 完成状态
 
-F-008 已完成分支内实现、全量回归和真实浏览器验收，当前状态为
-`Ready for PR`。功能分支为：
+F-008 已完成实现、全量回归、真实浏览器验收、Pull Request 合并、合并后
+`main` 回归、计划归档和功能分支清理，当前状态为 `Completed`。归档时分支为：
 
 ```text
-feature/F-008-question-image-upload
+main
 ```
 
 ### 21.1 实现与提交
@@ -730,6 +730,7 @@ main@5716825fa6f6cd64821edbda0d55eb4c9322b839
 b1f2849 docs: plan F-008 question image upload
 43b4382 feat: add question image backend
 737fef8 feat: add question image frontend
+ad9ae43 docs: record F-008 verification status
 ```
 
 后端实现了可配置本地存储、内容签名与大小校验、上传/读取/替换/移除 API、
@@ -801,14 +802,52 @@ C:\Users\hs040\Downloads\F-008-browser-acceptance\F008-20260905-225050
 - 验收会话记录：`471ea4094dbf2c54ed908148f7673ea986825f1c7b329858e8d36a9f2c93af17`；
 - 浏览器验收汇总：`bcd7b2b1c7e5c60bd7ebc49fd64e4b685b98e8767f15db1b1158fdf395ed2177`。
 
-### 21.4 剩余完成门槛
+### 21.4 Pull Request 与合并
 
-F-008 仍需：
+Pull Request #8：
 
-1. 提交并推送本次验证与文档记录；
-2. 创建并审查 Pull Request，使用 Merge Commit 合并；
-3. 在合并后的 `main` 上再次执行后端、前端测试、类型检查和生产构建；
-4. 更新最终 PR/合并事实，把计划移到 `docs/plans/completed/`；
-5. 删除本地和远端功能分支，确认 `main` clean 且与 `origin/main` 同步。
+```text
+https://github.com/AmberF1y/wrong-question-system/pull/8
+```
 
-完成这些步骤前，F-008 不得标记为 Completed。
+- 标题：`feat: add F-008 question image upload`；
+- base：`main@5716825fa6f6cd64821edbda0d55eb4c9322b839`；
+- head：`ad9ae4317478b603fbaa780fb39a486f0d716272`；
+- 合并方式：Merge Commit；
+- 合并提交：`b398968c64cb2e457d6625d3e568f2b30e0fdf51`；
+- 合并时间：2026-09-05T17:04:19Z（北京时间 2026-09-06 01:04:19）。
+
+### 21.5 合并后回归
+
+在 `main@b398968c64cb2e457d6625d3e568f2b30e0fdf51` 上实际通过：
+
+- 后端：146 个测试，0 failure、0 error、0 skipped；
+- 前端：16 个测试文件、81 个测试；
+- TypeScript 类型检查通过；
+- Vite 生产构建通过；
+- 回归结束工作区 clean。
+
+仓库外证据目录：
+
+```text
+C:\Users\hs040\Downloads\F-008-post-merge-20260906-011430
+```
+
+证据 SHA-256：
+
+- 后端测试日志：`09274f73b2c4a29dcb034c545dc046680c91c35e3a137eb46bdc8e15d9d9196f`；
+- 前端测试日志：`5c697281c10ee9377ddacb014c34da0762e948e5a66ef4183127ed9e513f0c42`；
+- 前端类型检查日志：`d06577005d5f1e3e2a5b0b73f3fee15e63d2e834b7912359fc7d026e43323441`；
+- 前端生产构建日志：`a43ff19ea39908ec3047088de6985d19fdc85affbde6a7517c22e78c5ae9bd72`；
+- 合并后回归汇总：`8e242a7d71df6ffe24855f3d45f09729bc588d3cd4c15f80a226c2b80570c346`。
+
+### 21.6 归档与分支清理
+
+- 计划归档到 `docs/plans/completed/F-008-question-image-upload.md`；
+- 本地与远端 `feature/F-008-question-image-upload` 均已删除；
+- 清理检查时 `main` 与 `origin/main` 均指向
+  `b398968c64cb2e457d6625d3e568f2b30e0fdf51`；
+- 清理检查时工作区 clean；
+- 最终归档只修改文档和计划位置，不修改生产代码或测试代码。
+
+F-008 的完成定义已全部满足，最终状态为 `Completed`。

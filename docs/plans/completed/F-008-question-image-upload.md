@@ -6,14 +6,14 @@
 | --- | --- |
 | Feature | F-008 |
 | 名称 | 题目图片上传与管理 |
-| 状态 | Verification complete; awaiting Pull Request |
+| 状态 | Completed |
 | 基线 | `main@5716825fa6f6cd64821edbda0d55eb4c9322b839` |
 | 功能分支 | `feature/F-008-question-image-upload` |
 | 目标环境 | Windows 桌面端、单用户、本地 MySQL、本地文件系统 |
 
-本计划只定义 F-008。实现、自动化测试、浏览器验收和临时数据/文件清理已经
-完成；Pull Request、合并后回归和计划归档尚未完成，因此当前不得把 F-008
-标记为 Completed。
+本计划只定义 F-008。实现、自动化测试、浏览器验收、临时数据/文件清理、
+Pull Request 合并、合并后回归、计划归档和功能分支清理均已完成，F-008
+最终状态为 `Completed`。
 
 ---
 
@@ -531,6 +531,7 @@ main@5716825fa6f6cd64821edbda0d55eb4c9322b839
 b1f2849 docs: plan F-008 question image upload
 43b4382 feat: add question image backend
 737fef8 feat: add question image frontend
+ad9ae43 docs: record F-008 verification status
 ```
 
 实际实现符合既定范围：
@@ -632,15 +633,48 @@ GitWorkingTreeClean    : True
 
 ---
 
-## 22. 当前剩余步骤
+## 22. Pull Request、合并后回归与归档
 
-F-008 当前是“验证完成、等待 Pull Request”，还需：
+Pull Request #8：
 
-1. 提交并推送本次文档与验证记录；
-2. 创建 Pull Request 并完成代码审查；
-3. 使用 Merge Commit 合并到 `main`；
-4. 在合并后的 `main` 上再次执行全量后端测试、前端测试、类型检查和生产构建；
-5. 写入 PR、合并提交与合并后证据，把本计划移到 `docs/plans/completed/`；
-6. 删除本地和远端功能分支，确认 `main` clean 且与 `origin/main` 同步。
+```text
+https://github.com/AmberF1y/wrong-question-system/pull/8
+```
 
-上述步骤完成前，本计划继续保留在 `docs/plans/active/`。
+- 标题：`feat: add F-008 question image upload`；
+- base：`main@5716825fa6f6cd64821edbda0d55eb4c9322b839`；
+- head：`ad9ae4317478b603fbaa780fb39a486f0d716272`；
+- 合并方式：Merge Commit；
+- 合并提交：`b398968c64cb2e457d6625d3e568f2b30e0fdf51`；
+- 合并时间：2026-09-05T17:04:19Z（北京时间 2026-09-06 01:04:19）。
+
+在合并后的 `main@b398968c64cb2e457d6625d3e568f2b30e0fdf51` 上实际通过：
+
+- 后端：146 个测试，0 failure、0 error、0 skipped；
+- 前端：16 个测试文件、81 个测试；
+- `npm.cmd run type-check` 通过；
+- `npm.cmd run build` 通过；
+- 回归结束工作区 clean。
+
+仓库外合并后证据目录：
+
+```text
+C:\Users\hs040\Downloads\F-008-post-merge-20260906-011430
+```
+
+SHA-256：
+
+- 后端测试日志：`09274f73b2c4a29dcb034c545dc046680c91c35e3a137eb46bdc8e15d9d9196f`；
+- 前端测试日志：`5c697281c10ee9377ddacb014c34da0762e948e5a66ef4183127ed9e513f0c42`；
+- 前端类型检查日志：`d06577005d5f1e3e2a5b0b73f3fee15e63d2e834b7912359fc7d026e43323441`；
+- 前端生产构建日志：`a43ff19ea39908ec3047088de6985d19fdc85affbde6a7517c22e78c5ae9bd72`；
+- 合并后回归汇总：`8e242a7d71df6ffe24855f3d45f09729bc588d3cd4c15f80a226c2b80570c346`。
+
+最终归档状态：
+
+- 本计划已移到 `docs/plans/completed/F-008-question-image-upload.md`；
+- 本地和远端 `feature/F-008-question-image-upload` 均已删除；
+- 分支清理检查时 `main` 与 `origin/main` 均指向
+  `b398968c64cb2e457d6625d3e568f2b30e0fdf51`；
+- 分支清理检查时工作区 clean；
+- F-008 完成定义全部满足，最终状态为 `Completed`。
