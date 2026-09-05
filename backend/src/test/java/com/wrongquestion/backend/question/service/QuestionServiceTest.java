@@ -11,6 +11,7 @@ import com.wrongquestion.backend.question.dto.UpdateQuestionRequest;
 import com.wrongquestion.backend.question.entity.Question;
 import com.wrongquestion.backend.question.exception.QuestionNotFoundException;
 import com.wrongquestion.backend.question.exception.QuestionValidationException;
+import com.wrongquestion.backend.question.image.service.QuestionImageTransactionCleanup;
 import com.wrongquestion.backend.question.repository.QuestionRepository;
 import com.wrongquestion.backend.review.entity.QuestionReviewState;
 import com.wrongquestion.backend.review.entity.ReviewStatus;
@@ -57,6 +58,9 @@ class QuestionServiceTest {
     @Mock
     private EntityManager entityManager;
 
+    @Mock
+    private QuestionImageTransactionCleanup imageTransactionCleanup;
+
     private QuestionService questionService;
 
     @BeforeEach
@@ -70,7 +74,8 @@ class QuestionServiceTest {
                 knowledgePointRepository,
                 reviewStateRepository,
                 entityManager,
-                clock
+                clock,
+                imageTransactionCleanup
         );
     }
 
@@ -443,11 +448,17 @@ class QuestionServiceTest {
     @Test
     void shouldDeleteQuestionAndReturnMessage() {
         Question question = question(10L, "题目", "408");
+        question.setImagePath(
+                "questions/10/00000000-0000-0000-0000-000000000010.png"
+        );
         when(questionRepository.findById(10L)).thenReturn(Optional.of(question));
 
         MessageResponse response = questionService.delete(10L);
 
         assertEquals("错题删除成功", response.message());
+        verify(imageTransactionCleanup).registerDeleteAfterCommit(
+                "questions/10/00000000-0000-0000-0000-000000000010.png"
+        );
         verify(questionRepository).delete(question);
         verify(questionRepository).flush();
     }
