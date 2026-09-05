@@ -6,12 +6,12 @@
 | --- | --- |
 | Feature ID | F-007 |
 | Feature 名称 | 每日复习前端闭环 |
-| 状态 | Verification Complete / Awaiting PR |
+| 状态 | Completed |
 | 规划日期 | 2026-09-04 |
 | 规划基线 | `main@6e466ee` |
 | 完整基线提交 | `6e466eee0039b66a72a03246203fc37ea1687233` |
 | 功能分支 | `feature/F-007-daily-review-frontend` |
-| 计划文件 | `docs/plans/active/F-007-daily-review-frontend.md` |
+| 计划文件 | `docs/plans/completed/F-007-daily-review-frontend.md` |
 | 前置 Feature | F-001～F-006 均已完成并合并到 `main` |
 | 文档记录的前端基线 | 类型检查通过；6 个测试文件、24 个测试通过；生产构建通过 |
 | 文档记录的后端基线 | 113 个测试通过，0 failure、0 error、0 skipped |
@@ -1616,17 +1616,18 @@ M  docs/project-status.md
 
 ## 37. 实际实现与验证记录
 
-### 37.1 当前阶段
+### 37.1 完成状态
 
-F-007 的功能分支实现、自动化回归、真实浏览器验收和临时数据清理均已完成。
-计划仍保留在 `active`，因为 PR、Merge Commit、合并后的 `main` 回归、计划归档
-和功能分支清理尚未完成。当前状态不是 Completed。
+F-007 的计划、实现、自动化回归、真实浏览器验收、异常恢复复验、临时数据
+清理、Pull Request、Merge Commit、合并后的 `main` 回归、计划归档和
+功能分支清理均已完成。第 36 节完成定义已经全部满足，最终状态为 Completed。
 
 ### 37.2 实际实现
 
 - 新增 review 类型、API、`/reviews` 路由和“每日复习”导航；
 - 实现动态队列、科目筛选、按需加载答案、四级评价、结果和手动下一题；
 - 实现加载、空状态、404、409、断线、无响应和代理 5xx 恢复；
+- 评价响应不确定时禁止自动重发，只通过 GET 同步服务器状态；
 - 扩展错题详情页，提供已掌握错题重新加入确认和每日复习入口；
 - 未增加 review Pinia Store，也未在前端计算调度日期；
 - 未修改 Java、Flyway、数据库结构或后端 API 契约。
@@ -1637,22 +1638,24 @@ F-007 的功能分支实现、自动化回归、真实浏览器验收和临时�
 e803f19 docs: add F-007 daily review frontend plan
 12a911b feat: add F-007 daily review frontend
 de3858c fix: handle uncertain review evaluation responses
+7494ce5 docs: record F-007 verification status
 ```
 
-### 37.3 自动化回归
+### 37.3 功能分支自动化回归
 
 - 后端：113 个测试通过，0 failure、0 error、0 skipped；
 - 前端：11 个测试文件、63 个测试通过；
 - 类型检查和 Vite 生产构建通过，共转换 1719 个模块；
-- 主入口 chunk 大于 500 kB 的提示为非阻塞性能警告。
+- 主入口 chunk 大于 500 kB 的提示为非阻塞性能警告；
+- 工作区 clean。
 
-日志 SHA-256：
+功能分支日志 SHA-256：
 
 - 后端：`a8f94a99b031c05e0978e35e83b11329bb34f0c05fffcab6f81fe9b63f66a6f7`；
 - 前端测试：`92329c2562d9eb66c776f383e700a8378a7ba3281d5b3fd7393b1ed018a34c5f`；
-- 前端构建：`e912b469b4a4b12cbd47303ff25143df36dc3195c50472`。
+- 前端构建：`e912b469b4a4b12cbd47303ff25143df36cb6738bc3ba4f13a36dc3195c50472`。
 
-### 37.4 浏览器验收
+### 37.4 真实浏览器验收与修复
 
 主验收覆盖正常队列、筛选、按需答案、四级评价、动态数量、空队列、连续两次
 熟练进入 `MASTERED`、未到期排除、404、两标签页 409 和重新加入。
@@ -1661,10 +1664,11 @@ de3858c fix: handle uncertain review evaluation responses
 通过 GET 同步服务器状态，以及重新加入确认框点击取消后状态不变。
 
 真实验收发现 Vite 代理可能把后端断开转换为 HTTP 500。原判断只识别 Axios
-无响应，会重新开放评价按钮并产生重复 POST 风险。`de3858c` 将无响应和 5xx
-均归入不确定状态，自动化测试和真实浏览器复验均通过。
+无响应，会重新开放评价按钮并产生重复 POST 风险。提交 `de3858c` 将无响应
+和 5xx 均归入不确定状态；系统不会自动重发评价，只允许同步服务器状态。
+相关自动化测试与真实浏览器复验均通过。
 
-### 37.5 数据清理与证据
+### 37.5 临时数据清理与证据
 
 两轮验收清理后数据库均恢复为 `knowledge_point=4`，其余四张业务表为 0；
 所有临时 ID、运行标记和目标历史数量均为 0。
@@ -1675,13 +1679,53 @@ de3858c fix: handle uncertain review evaluation responses
 - 不确定同步与取消确认：`4f9b233c841ff238eab30d4ae89da4508814049ecea39af877f8a57aa3e92bd5`；
 - 补充验收清理：`65e1ddbe89317dfbbae517826c8ceac08c19e2eca0469f4c6e4dd33253ae249f`。
 
-完整证据位于仓库外的 `F007-20260905-014330-ba0ba4` 和
-`F007-RECOVERY-20260905-034121` 目录。证据保留，数据库临时数据已删除。
+验收期间曾生成仓库外的 `F007-20260905-014330-ba0ba4` 和
+`F007-RECOVERY-20260905-034121` 证据目录，但用户在最终归档前清空了
+下载目录。当前保留的是已经记录的验证结果和 SHA-256；原始证据文件不再
+存在，无法在最终归档阶段重新计算其哈希。数据库临时数据此前已完成清理。
 
-### 37.6 剩余工作
+### 37.6 Pull Request 与 main 回归
 
-- 提交并推送验证文档；
-- 创建并核对 PR，使用 Merge Commit 合并；
-- 在合并后的 `main` 重跑全部前后端验证；
-- 归档本计划并记录最终事实；
-- 删除功能分支并确认 `main` 与远端同步。
+Pull Request #7：
+
+- 地址：`https://github.com/AmberF1y/wrong-question-system/pull/7`；
+- 标题：`feat: add F-007 daily review frontend`；
+- 合并方式：Merge Commit；
+- 合并提交：`dde0445c07e5f19b72ea74b6e3b81a533f9586c8`；
+- 父提交：`6e466eee0039b66a72a03246203fc37ea1687233` 和
+  `7494ce545e74701daad974053d76e02b3d459198`；
+- 变更：4 个提交、21 个文件、增加 4047 行、删除 17 行。
+
+仓库没有为本次合并配置可用的 GitHub Actions 工作流。用户在合并后的本地
+`main` 上执行回归，结果为：
+
+- 后端 113 个测试通过；
+- 前端 11 个测试文件、63 个测试通过；
+- 类型检查通过；
+- Vite 生产构建通过；
+- 工作区 clean。
+
+合并后日志 SHA-256：
+
+- 后端：`1ec9db6aa5be8c6a11796e27f2d65e49e248c014c3bdefb13c10b0161019c955`；
+- 前端测试：`d6d9a10a73c4ac22309b0b0de91657a137adbcc74b4f04243c5dc0b7dd771d41`；
+- 前端构建：`3bed700e59188f0af7fbdb1a3de0962b891f4e4dea026be5c77fb7d622d24e7a`；
+- 汇总：`2fc02803191692d501188a9eee4e6674946d47af579c9993f67d02d13b2de5ba`。
+
+这些合并后日志也在最终归档前随下载目录一并删除。以上哈希来自测试完成时
+的已记录输出，当前无法对原始日志文件重新校验。
+
+### 37.7 计划归档与仓库清理
+
+- 本计划已从
+  `docs/plans/active/F-007-daily-review-frontend.md`
+  归档到
+  `docs/plans/completed/F-007-daily-review-frontend.md`；
+- 合并前功能分支 HEAD `7494ce5` 已包含在 `main` 历史中；
+- 本地和远端 `feature/F-007-daily-review-frontend` 均已删除；
+- 分支清理时 `main` 与 `origin/main` 均为 `dde0445`；
+- 分支清理时工作区 clean；
+- 最终归档只修改 README、项目状态和计划位置/内容；
+- 未修改生产代码、测试、API、数据库、Flyway 或 ADR。
+
+至此，第 36 节全部条件已经满足，F-007 可以标记为 Completed。
