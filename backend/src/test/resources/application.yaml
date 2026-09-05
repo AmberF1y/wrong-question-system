@@ -1,4 +1,9 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
+
   datasource:
     url: jdbc:mysql://localhost:3306/wrong_question_system_test
     username: root
@@ -22,3 +27,5 @@ spring:
 app:
   review:
     zone-id: ${APP_REVIEW_ZONE_ID:Asia/Shanghai}
+  storage:
+    question-image-directory: ${APP_QUESTION_IMAGE_DIRECTORY:./target/test-question-images}

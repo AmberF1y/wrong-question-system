@@ -5,6 +5,10 @@ import com.wrongquestion.backend.knowledge.exception.KnowledgePointNotFoundExcep
 import com.wrongquestion.backend.knowledge.exception.KnowledgePointValidationException;
 import com.wrongquestion.backend.question.exception.QuestionNotFoundException;
 import com.wrongquestion.backend.question.exception.QuestionValidationException;
+import com.wrongquestion.backend.question.image.exception.QuestionImageConflictException;
+import com.wrongquestion.backend.question.image.exception.QuestionImageNotFoundException;
+import com.wrongquestion.backend.question.image.exception.QuestionImageStorageException;
+import com.wrongquestion.backend.question.image.exception.QuestionImageValidationException;
 import com.wrongquestion.backend.review.exception.ReviewConflictException;
 import com.wrongquestion.backend.review.exception.ReviewValidationException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +21,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -125,6 +130,79 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.BAD_REQUEST,
                 exception.getCode(),
+                exception.getMessage(),
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(QuestionImageValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handleQuestionImageValidation(
+            QuestionImageValidationException exception,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = "QUESTION_IMAGE_TOO_LARGE".equals(
+                exception.getCode()
+        ) ? HttpStatus.PAYLOAD_TOO_LARGE : HttpStatus.BAD_REQUEST;
+        return buildResponse(
+                status,
+                exception.getCode(),
+                exception.getMessage(),
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleMaxUploadSizeExceeded(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.PAYLOAD_TOO_LARGE,
+                "QUESTION_IMAGE_TOO_LARGE",
+                "题目图片不能超过20 MiB",
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(QuestionImageNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleQuestionImageNotFound(
+            QuestionImageNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                QuestionImageNotFoundException.CODE,
+                exception.getMessage(),
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(QuestionImageConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleQuestionImageConflict(
+            QuestionImageConflictException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                QuestionImageConflictException.CODE,
+                exception.getMessage(),
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(QuestionImageStorageException.class)
+    public ResponseEntity<ApiErrorResponse> handleQuestionImageStorage(
+            QuestionImageStorageException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                QuestionImageStorageException.CODE,
                 exception.getMessage(),
                 request.getRequestURI(),
                 null

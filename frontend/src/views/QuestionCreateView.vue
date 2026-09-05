@@ -36,11 +36,11 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { createQuestion } from '../api/questions'
+import { createQuestion, uploadQuestionImage } from '../api/questions'
 import AppPageHeader from '../components/AppPageHeader.vue'
 import QuestionForm from '../components/QuestionForm.vue'
 import { useKnowledgePointStore } from '../stores/knowledge-points'
-import type { QuestionFormPayload } from '../types/question'
+import type { QuestionFormPayload, QuestionImageChange } from '../types/question'
 import { normalizeApiError } from '../utils/api-error'
 
 const router = useRouter()
@@ -58,12 +58,28 @@ async function loadKnowledgeTree(): Promise<void> {
   }
 }
 
-async function saveQuestion(payload: QuestionFormPayload): Promise<void> {
+async function saveQuestion(
+  payload: QuestionFormPayload,
+  imageChange: QuestionImageChange,
+): Promise<void> {
   submitting.value = true
   fieldErrors.value = {}
 
   try {
     const question = await createQuestion(payload)
+
+    if (imageChange.file) {
+      try {
+        await uploadQuestionImage(question.id, imageChange.file)
+      } catch (error) {
+        ElMessage.error(
+          `错题已保存，但图片上传失败：${normalizeApiError(error).message}`,
+        )
+        await router.push(`/questions/${question.id}/edit`)
+        return
+      }
+    }
+
     ElMessage.success('错题保存成功')
     await router.push(`/questions/${question.id}`)
   } catch (error) {

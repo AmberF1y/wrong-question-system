@@ -77,6 +77,21 @@
     <el-card class="page-card form-section" shadow="never">
       <template #header>
         <div class="form-section__header">
+          <strong>题目图片（可选）</strong>
+          <span>图片用于保留公式、图表或原题排版，不进行 OCR</span>
+        </div>
+      </template>
+
+      <QuestionImageField
+        :current-image-url="currentImageUrl"
+        :disabled="submitting"
+        @change="imageChange = $event"
+      />
+    </el-card>
+
+    <el-card class="page-card form-section" shadow="never">
+      <template #header>
+        <div class="form-section__header">
           <strong>复盘信息</strong>
           <span>解析说明解法，错误原因记录本次失误的根源</span>
         </div>
@@ -161,11 +176,12 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import type { KnowledgePointTreeNode } from '../types/knowledge-point'
-import type { QuestionFormPayload } from '../types/question'
+import type { QuestionFormPayload, QuestionImageChange } from '../types/question'
 import { areKnowledgePointsInSameRoot } from '../utils/knowledge-tree'
 import KnowledgePointSelector from './KnowledgePointSelector.vue'
+import QuestionImageField from './QuestionImageField.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -174,21 +190,27 @@ const props = withDefaults(
     submitting?: boolean
     submitLabel?: string
     fieldErrors?: Record<string, string>
+    currentImageUrl?: string
   }>(),
   {
     initialValue: undefined,
     submitting: false,
     submitLabel: '保存错题',
     fieldErrors: () => ({}),
+    currentImageUrl: '',
   },
 )
 
 const emit = defineEmits<{
-  submit: [value: QuestionFormPayload]
+  submit: [value: QuestionFormPayload, imageChange: QuestionImageChange]
   cancel: []
 }>()
 
 const form = reactive<QuestionFormPayload>(emptyForm())
+const imageChange = ref<QuestionImageChange>({
+  file: null,
+  removeExisting: false,
+})
 const clientFieldErrors = reactive<Record<keyof QuestionFormPayload, string>>(
   emptyClientFieldErrors(),
 )
@@ -257,14 +279,18 @@ function submit(): void {
     return
   }
 
-  emit('submit', {
-    questionText: form.questionText.trim(),
-    wrongAnswer: form.wrongAnswer.trim(),
-    correctAnswer: form.correctAnswer.trim(),
-    analysis: form.analysis.trim(),
-    errorReason: form.errorReason.trim(),
-    knowledgePointIds: [...new Set(form.knowledgePointIds)],
-  })
+  emit(
+    'submit',
+    {
+      questionText: form.questionText.trim(),
+      wrongAnswer: form.wrongAnswer.trim(),
+      correctAnswer: form.correctAnswer.trim(),
+      analysis: form.analysis.trim(),
+      errorReason: form.errorReason.trim(),
+      knowledgePointIds: [...new Set(form.knowledgePointIds)],
+    },
+    { ...imageChange.value },
+  )
 }
 
 watch(

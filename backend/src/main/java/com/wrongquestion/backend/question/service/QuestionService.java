@@ -13,6 +13,7 @@ import com.wrongquestion.backend.question.dto.UpdateQuestionRequest;
 import com.wrongquestion.backend.question.entity.Question;
 import com.wrongquestion.backend.question.exception.QuestionNotFoundException;
 import com.wrongquestion.backend.question.exception.QuestionValidationException;
+import com.wrongquestion.backend.question.image.service.QuestionImageTransactionCleanup;
 import com.wrongquestion.backend.question.repository.QuestionRepository;
 import com.wrongquestion.backend.review.entity.QuestionReviewState;
 import com.wrongquestion.backend.review.entity.ReviewStatus;
@@ -50,19 +51,22 @@ public class QuestionService {
     private final QuestionReviewStateRepository reviewStateRepository;
     private final EntityManager entityManager;
     private final Clock clock;
+    private final QuestionImageTransactionCleanup imageTransactionCleanup;
 
     public QuestionService(
             QuestionRepository questionRepository,
             KnowledgePointRepository knowledgePointRepository,
             QuestionReviewStateRepository reviewStateRepository,
             EntityManager entityManager,
-            Clock clock
+            Clock clock,
+            QuestionImageTransactionCleanup imageTransactionCleanup
     ) {
         this.questionRepository = questionRepository;
         this.knowledgePointRepository = knowledgePointRepository;
         this.reviewStateRepository = reviewStateRepository;
         this.entityManager = entityManager;
         this.clock = clock;
+        this.imageTransactionCleanup = imageTransactionCleanup;
     }
 
     @Transactional
@@ -220,6 +224,9 @@ public class QuestionService {
         Question question = questionRepository.findById(id)
                 .orElseThrow(() -> new QuestionNotFoundException("错题不存在"));
 
+        imageTransactionCleanup.registerDeleteAfterCommit(
+                question.getImagePath()
+        );
         questionRepository.delete(question);
         questionRepository.flush();
         return new MessageResponse(DELETE_SUCCESS_MESSAGE);

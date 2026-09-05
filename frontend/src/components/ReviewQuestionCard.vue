@@ -19,6 +19,8 @@
       {{ question.questionText }}
     </div>
 
+    <QuestionImageDisplay v-if="imageUrl" :src="imageUrl" class="review-question-image" />
+
     <div v-if="!answerRevealed" class="question-actions">
       <p>请先在纸上重新作答，系统不会保存本次作答内容。</p>
       <el-button
@@ -37,12 +39,14 @@
 <script setup lang="ts">
 import type { DueQuestion } from '../types/review'
 import { formatDate } from '../utils/date-time'
+import QuestionImageDisplay from './QuestionImageDisplay.vue'
 
 defineProps<{
   question: DueQuestion
   dueCount: number
   loadingAnswer: boolean
   answerRevealed: boolean
+  imageUrl?: string
   disabled?: boolean
 }>()
 
@@ -94,6 +98,10 @@ h2 {
   justify-content: space-between;
   padding-top: 18px;
   border-top: 1px solid var(--app-border);
+}
+
+.review-question-image {
+  margin: 0 0 24px;
 }
 
 .question-actions p {

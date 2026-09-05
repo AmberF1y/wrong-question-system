@@ -1,7 +1,7 @@
 import ElementPlus from 'element-plus'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { deleteQuestion, getQuestion } from '../api/questions'
+import { deleteQuestion, getQuestion, getQuestionImageUrl } from '../api/questions'
 import { reactivateQuestion } from '../api/reviews'
 import type { QuestionDetail } from '../types/question'
 import type { ReviewActionResponse } from '../types/review'
@@ -36,6 +36,7 @@ vi.mock('vue-router', () => ({
 vi.mock('../api/questions', () => ({
   deleteQuestion: vi.fn(),
   getQuestion: vi.fn(),
+  getQuestionImageUrl: vi.fn(),
 }))
 
 vi.mock('../api/reviews', () => ({
@@ -44,6 +45,7 @@ vi.mock('../api/reviews', () => ({
 
 const mockedGetQuestion = vi.mocked(getQuestion)
 const mockedDeleteQuestion = vi.mocked(deleteQuestion)
+const mockedGetQuestionImageUrl = vi.mocked(getQuestionImageUrl)
 const mockedReactivateQuestion = vi.mocked(reactivateQuestion)
 
 const activeQuestion: QuestionDetail = {
@@ -111,6 +113,10 @@ describe('QuestionDetailView reactivation', () => {
     mocks.push.mockReset()
     mockedGetQuestion.mockReset()
     mockedDeleteQuestion.mockReset()
+    mockedGetQuestionImageUrl.mockReset()
+    mockedGetQuestionImageUrl.mockImplementation(
+      (id, cacheKey) => `/api/questions/${id}/image?v=${cacheKey}`,
+    )
     mockedReactivateQuestion.mockReset()
   })
 
@@ -120,6 +126,23 @@ describe('QuestionDetailView reactivation', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="reactivate-question"]').exists()).toBe(false)
+  })
+
+  it('renders the image endpoint only when the detail has an image', async () => {
+    mockedGetQuestion.mockResolvedValue({
+      ...activeQuestion,
+      imagePath: 'questions/42/generated.png',
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(mockedGetQuestionImageUrl).toHaveBeenCalledWith(
+      42,
+      activeQuestion.updatedTime,
+    )
+    expect(wrapper.get('[data-testid="question-image"]').attributes('src')).toBe(
+      `/api/questions/42/image?v=${activeQuestion.updatedTime}`,
+    )
   })
 
   it('shows the action for a mastered question and does nothing after cancellation', async () => {
