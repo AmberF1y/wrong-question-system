@@ -2,12 +2,11 @@
 
 面向个人学习场景的错题整理与固定规则滚动复习全栈应用，同时作为 Java / Vue 工程实践项目。
 
-## 当前代码能力
+## v1.0.0 第一版
 
-F-001～F-008 已全部完成并合并到 `main`。F-008 通过 Pull Request #8 使用
-Merge Commit `b398968` 合并；功能分支和合并后的 `main` 均通过后端 146 个
-测试、前端 16 个测试文件共 81 个测试、类型检查和生产构建。真实浏览器验收、
-异常恢复复验、临时数据与图片清理、计划归档和功能分支清理均已完成。
+F-001～F-008 已全部完成并合并到 `main`。当前 `release/v1.0.0` 正在执行发布
+收口，版本号、产品边界、本地长期使用和备份流程均以 `v1.0.0` 为目标。标签与
+GitHub Release 尚未创建前，本仓库内容仍属于发布候选状态。
 
 - 健康检查；
 - 树形知识点创建、修改、移动和严格删除；
@@ -37,6 +36,10 @@ Merge Commit `b398968` 合并；功能分支和合并后的 `main` 均通过后�
 
 当前不包含 OCR、Dashboard、趋势统计、薄弱知识点、复习历史页面、自适应
 复习算法、用户系统、对象存储、多图片和部署。
+
+`v1.0.0` 的第一版完成标准是“录入 → 保存 → 调度 → 复习 → 评价 → 再调度”
+核心闭环可以在 Windows 桌面浏览器中长期自用。Dashboard、学习反馈和部署
+进入后续版本候选，不阻断第一版发布。
 
 ## 技术栈
 
@@ -105,6 +108,21 @@ $env:APP_QUESTION_IMAGE_DIRECTORY = "D:\WrongQuestionData\question-images"
 
 ## 本地运行
 
+长期使用建议从仓库根目录执行启动脚本。先在当前 PowerShell 会话中提供数据库
+密码，再运行：
+
+```powershell
+Set-Location "D:\Projects\wrong-question-system"
+$env:DB_PASSWORD = "<你的本地 MySQL 密码>"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\start-local.ps1"
+```
+
+脚本默认把正式题目图片保存到 `D:\WrongQuestionData\question-images`，并分别
+打开后端和前端窗口。完整的启动、停止、备份、恢复和故障处理流程见
+`docs/local-usage.md`。
+
+也可以按下面的命令分别手动启动。
+
 先启动 MySQL 和后端：
 
 ```powershell
@@ -154,6 +172,18 @@ F-008 功能分支和合并后的 `main` 最终验证结果均为后端 146 个�
 Windows PowerShell 因执行策略阻止 `npm.ps1` 时，使用 `npm.cmd` 即可，
 不需要修改机器级执行策略。
 
+## 本地备份
+
+先使用 `Ctrl+C` 停止后端，再从仓库根目录执行：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\backup-local.ps1"
+```
+
+脚本默认同时备份 `wrong_question_system` 数据库和
+`D:\WrongQuestionData\question-images`，结果写入 `D:\WrongQuestionBackups`。
+数据库密码由 `mysqldump` 交互式读取，不写入脚本参数、仓库或日志。
+
 ## 已有开发库首次接入 Flyway
 
 不要直接在已有非空开发库上启动新版本。首次接管必须先备份并核对旧结构，然后仅本次启动显式设置：
@@ -196,5 +226,7 @@ Flyway 会把现有 F-004 结构登记为 V1，再执行 V2。迁移成功并核
 - `docs/api-design.md`：HTTP 契约；
 - `docs/database-design.md`：表结构和数据约束；
 - `docs/project-status.md`：真实项目状态；
+- `docs/local-usage.md`：Windows 本地长期使用、备份和恢复；
+- `docs/releases/`：版本发布说明；
 - `docs/decisions/`：架构决策记录；
 - `docs/plans/`：Feature 计划与实施记录。
