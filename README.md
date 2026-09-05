@@ -4,11 +4,10 @@
 
 ## 当前代码能力
 
-F-001～F-007 已全部完成并合并到 `main`。F-007 通过 Pull Request #7
-使用 Merge Commit `dde0445` 合并；合并后的 `main` 已再次通过后端
-113 个测试、前端 11 个测试文件共 63 个测试、类型检查和生产构建。
-真实浏览器验收、异常恢复复验、临时数据清理、计划归档和功能分支清理
-均已完成。
+F-001～F-007 已全部完成并合并到 `main`。F-008 已在功能分支完成单题单图
+上传与管理、自动化回归、真实浏览器验收和临时数据清理，当前等待 Pull
+Request。功能分支已通过后端 146 个测试、前端 16 个测试文件共 81 个测试、
+类型检查和生产构建；合并后的 `main` 回归与计划归档尚未执行。
 
 - 健康检查；
 - 树形知识点创建、修改、移动和严格删除；
@@ -30,9 +29,14 @@ F-001～F-007 已全部完成并合并到 `main`。F-007 通过 Pull Request #7
 - 四级评价、服务器结果展示、手动进入下一题和空队列反馈；
 - 评价响应不确定时禁止自动重发，并通过服务器状态同步恢复；
 - 已掌握错题详情中的重新加入确认和今日复习入口。
+- 单题单张可选图片的上传、读取、替换、单独移除和随题删除清理；
+- PNG、JPEG、WebP、GIF 内容签名校验与 20 MiB 上限；
+- 创建页和编辑页的图片选择、本地预览、替换与移除；
+- 详情页和每日复习页的响应式图片、大图查看和局部失败重试；
+- 服务端生成相对存储键，图片保存在可配置的本地文件系统目录。
 
-当前不包含图片上传、OCR、Dashboard、趋势统计、薄弱知识点、复习历史页面、
-自适应复习算法、用户系统和部署。
+当前不包含 OCR、Dashboard、趋势统计、薄弱知识点、复习历史页面、自适应
+复习算法、用户系统、对象存储、多图片和部署。
 
 ## 技术栈
 
@@ -89,6 +93,16 @@ $env:DB_PASSWORD = "<你的本地 MySQL 密码>"
 $env:APP_REVIEW_ZONE_ID = "Asia/Shanghai"
 ```
 
+题目图片默认保存在后端工作目录下的 `./data/question-images`。部署或需要固定
+外部目录时通过环境变量覆盖，例如：
+
+```powershell
+$env:APP_QUESTION_IMAGE_DIRECTORY = "D:\WrongQuestionData\question-images"
+```
+
+数据库只保存 `questions/{questionId}/{uuid}.{extension}` 形式的相对路径，
+不得把图片目录或真实图片提交到 Git。
+
 ## 本地运行
 
 先启动 MySQL 和后端：
@@ -96,6 +110,7 @@ $env:APP_REVIEW_ZONE_ID = "Asia/Shanghai"
 ```powershell
 cd D:\Projects\wrong-question-system\backend
 $env:DB_PASSWORD = "<你的本地 MySQL 密码>"
+$env:APP_QUESTION_IMAGE_DIRECTORY = "D:\WrongQuestionData\question-images"
 .\mvnw.cmd spring-boot:run
 ```
 
@@ -133,6 +148,9 @@ npm.cmd run test:unit -- --run
 npm.cmd run build
 ```
 
+F-008 功能分支最终验证结果为后端 146 个测试通过、前端 16 个测试文件共
+81 个测试通过，类型检查和生产构建通过。
+
 Windows PowerShell 因执行策略阻止 `npm.ps1` 时，使用 `npm.cmd` 即可，
 不需要修改机器级执行策略。
 
@@ -159,6 +177,18 @@ Flyway 会把现有 F-004 结构登记为 V1，再执行 V2。迁移成功并核
 | POST | `/api/reviews/{questionId}/reactivate` | 重新加入已掌握错题 |
 
 答案和解析继续通过 `GET /api/questions/{id}` 获取。
+
+## 题目图片 API
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| PUT | `/api/questions/{questionId}/image` | 上传或替换单张题目图片，multipart 字段名为 `file` |
+| GET | `/api/questions/{questionId}/image` | 以内联方式读取题目图片 |
+| DELETE | `/api/questions/{questionId}/image` | 单独移除图片而保留错题 |
+
+支持 PNG、JPEG、WebP 和 GIF，单文件最大 20 MiB。服务端根据内容签名识别
+实际格式，不信任客户端文件名、扩展名或 MIME；SVG 和无法识别的内容会被
+拒绝。错题列表不请求图片，详情和每日复习仅在 `imagePath` 非空时读取。
 
 ## 文档
 

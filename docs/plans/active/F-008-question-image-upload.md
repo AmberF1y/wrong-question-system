@@ -6,13 +6,14 @@
 | --- | --- |
 | Feature | F-008 |
 | 名称 | 题目图片上传与管理 |
-| 状态 | Planning |
+| 状态 | Verification complete; awaiting Pull Request |
 | 基线 | `main@5716825fa6f6cd64821edbda0d55eb4c9322b839` |
 | 功能分支 | `feature/F-008-question-image-upload` |
 | 目标环境 | Windows 桌面端、单用户、本地 MySQL、本地文件系统 |
 
-本计划只定义 F-008。尚未完成实现、自动化测试、浏览器验收、数据清理、
-Pull Request、合并后回归和计划归档前，不得把 F-008 标记为 Completed。
+本计划只定义 F-008。实现、自动化测试、浏览器验收和临时数据/文件清理已经
+完成；Pull Request、合并后回归和计划归档尚未完成，因此当前不得把 F-008
+标记为 Completed。
 
 ---
 
@@ -513,3 +514,133 @@ Controller 集成测试继续连接 `wrong_question_system_test`，不能写入�
 - 合并后的 main 再次通过全部验证；
 - 计划归档，功能分支删除；
 - main clean 且与 origin/main 同步。
+
+---
+
+## 19. 实际实现与提交
+
+F-008 从以下基线创建：
+
+```text
+main@5716825fa6f6cd64821edbda0d55eb4c9322b839
+```
+
+已推送提交：
+
+```text
+b1f2849 docs: plan F-008 question image upload
+43b4382 feat: add question image backend
+737fef8 feat: add question image frontend
+```
+
+实际实现符合既定范围：
+
+- 后端增加配置属性、本地安全存储、图片格式模型、事务清理、业务服务、三个
+  图片 API 和统一异常响应；
+- `QuestionService.delete` 接入提交后的图片清理；
+- 前端增加图片 API、选择/预览控件和显示/重试控件；
+- 创建、编辑、详情和每日复习页面接入单图流程；
+- 数据库继续复用 `question.image_path`，没有新增迁移；
+- 上传目录由 `.gitignore` 排除，不提交验收图片或运行时文件。
+
+实现文件比第 8 节的简化草图增加了格式、内容和异常模型，以及独立事务清理
+类。这些类用于隔离文件验证、HTTP 契约和提交/回滚清理职责，不改变产品范围。
+
+首次专项测试曾暴露两个实现错误：错误导入 `java.io.DirectoryNotEmptyException`
+导致编译失败，以及 Spring 因多构造器未明确注入而尝试默认构造器导致上下文
+加载失败。分别改为 `java.nio.file.DirectoryNotEmptyException` 和明确构造器
+注入后，专项与全量测试均通过。
+
+---
+
+## 20. 自动化验证记录
+
+在提交 `737fef8f154cbc1341bfea9faef81415cc8e4602` 上执行全量验证：
+
+- 后端：146 个测试全部通过，0 failure、0 error、0 skipped；
+- 前端：16 个测试文件、81 个测试全部通过；
+- `npm.cmd run type-check` 通过；
+- `npm.cmd run build` 通过，Vite 转换 1725 个模块；
+- 验证结束工作区 clean。
+
+仓库外证据目录：
+
+```text
+C:\Users\hs040\Downloads\F-008-regression-20260905-224309
+```
+
+SHA-256：
+
+- 后端测试日志：`4d66abcf0b0ca37f916af0833ee9e24cd6046f9369ad1d67fd90fcd3d247611d`；
+- 前端测试日志：`86aef976d838815fe2737fb56ac047536b7ab7a76a4d28502588e609ffccc488`；
+- 前端类型检查日志：`d06577005d5f1e3e2a5b0b73f3fee15e63d2e834b7912359fc7d026e43323441`；
+- 前端生产构建日志：`69c11aa430ebbbad814c52333053ad6abc65f5737f04634beb0c9eb26d3a4d98`；
+- 回归汇总：`e56d16d5d673894e407d6c7beacdc19ea067bf48b04a1588d83dcd839df837d4`。
+
+生产构建给出主 chunk 超过 500 kB 的非阻断警告，构建退出码为 0。F-008 没有
+引入新的打包失败；代码拆分作为后续工程优化，不扩大本 Feature。
+
+---
+
+## 21. 真实浏览器验收与清理
+
+验收目录：
+
+```text
+C:\Users\hs040\Downloads\F-008-browser-acceptance\F008-20260905-225050
+```
+
+真实浏览器、后端和 MySQL 验收已覆盖第 14 节全部要求，包括：
+
+- 无图片创建；
+- PNG、JPEG、WebP、GIF 的本地预览、上传、显示、替换与刷新；
+- SVG 客户端限制、20 MiB 客户端限制和伪装图片服务端内容校验；
+- 创建文字成功而图片失败后的编辑页单独重试，不重复创建错题；
+- 图片响应 MIME、`inline`、`nosniff`、`no-store` 与字节读取；
+- 详情大图、局部失败、恢复文件后的重新加载；
+- 后端重启后的图片持久读取；
+- 每日复习查看答案前显示题图，答案仍按需获取；
+- 单独移除不改变文字和复习状态，重复移除返回 409；
+- 删除错题后清理图片、复习状态和历史。
+
+验收使用临时错题 ID 82、83、84。清理后：
+
+```text
+Question82Status       : 404
+Question83Status       : 404
+Question84Status       : 404
+RemainingQuestions     : 0
+RemainingReviewStates  : 0
+RemainingReviewRecords : 0
+RemainingStorageFiles  : 0
+GitWorkingTreeClean    : True
+```
+
+浏览器验收证据 SHA-256：
+
+- 夹具压缩包：`d846e4c60dc691a18a7b8ae46c2f3c208bf72252952aac60ab41ae06de0f8337`；
+- 夹具清单：`173ea3b098cb620bf63065d4d44b04b6b2ea611987277e785218fd46310029ff`；
+- 后端启动日志：`58cce6cd26d1ef820386ceefdd60a3c1cae66eb0c8c89c98de931c599d8dfad4`；
+- 后端重启日志：`d49bd26662ae8504856417994a25429c7abf27f1ed6dc4d00e1d344c8148b52c`；
+- 前端启动日志：`ddcfbf1b4b503579ef10c60620d541b7c7dd7f2af1035b0dde2e486f9574bd79`；
+- 清理汇总：`f84bbfeda7aaa1029c3de88780e5bc93df1db0471c09ea054c98110fc116d74e`；
+- 验收会话记录：`471ea4094dbf2c54ed908148f7673ea986825f1c7b329858e8d36a9f2c93af17`；
+- 浏览器验收汇总：`bcd7b2b1c7e5c60bd7ebc49fd64e4b685b98e8767f15db1b1158fdf395ed2177`。
+
+验收图片、日志和汇总保存在仓库外，未加入 Git。当前证据目录仍存在；最终
+归档时必须再次确认，若用户后续清理了目录，应如实更新保留状态。
+
+---
+
+## 22. 当前剩余步骤
+
+F-008 当前是“验证完成、等待 Pull Request”，还需：
+
+1. 提交并推送本次文档与验证记录；
+2. 创建 Pull Request 并完成代码审查；
+3. 使用 Merge Commit 合并到 `main`；
+4. 在合并后的 `main` 上再次执行全量后端测试、前端测试、类型检查和生产构建；
+5. 写入 PR、合并提交与合并后证据，把本计划移到 `docs/plans/completed/`；
+6. 删除本地和远端功能分支，确认 `main` clean 且与 `origin/main` 同步。
+
+上述步骤完成前，本计划继续保留在 `docs/plans/active/`。

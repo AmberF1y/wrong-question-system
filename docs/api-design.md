@@ -2,12 +2,13 @@
 
 ## 1. 文档状态
 
-- 当前版本：F-005 已完成并合并到 `main`
+- 当前版本：F-008 已在功能分支完成实现与验证，等待 Pull Request
 - 基础路径：`/api`
-- 数据格式：JSON
-- 当前范围：健康检查、知识点管理、错题管理与固定规则滚动复习
+- 数据格式：JSON；图片读取接口返回原始二进制
+- 当前范围：健康检查、知识点管理、错题管理、固定规则滚动复习与题目图片
 
-本文件记录已经确认并进入实现的 API，不记录图片上传、OCR、Dashboard 或自适应复习接口。
+本文件记录已经确认并进入实现的 API。OCR、Dashboard、自适应复习和多图片
+接口仍不在当前范围内。
 
 ---
 
@@ -395,7 +396,10 @@ PUT 提交全部可编辑字段，请求结构与创建错题相同。
 }
 ```
 
-删除采用真实删除。数据库通过 `ON DELETE CASCADE` 清理对应的 `question_knowledge_point` 记录，但不会删除任何知识点。
+删除采用真实删除。数据库通过 `ON DELETE CASCADE` 清理对应的
+`question_knowledge_point`、`question_review_state` 和 `review_record`，但不会
+删除任何知识点。错题存在图片时，数据库事务提交后同时删除对应文件和空的
+题目图片目录。
 
 ---
 
@@ -579,3 +583,115 @@ PROFICIENT
 | 并发请求持有过期版本 | 409 | `REVIEW_CONCURRENT_MODIFICATION` |
 
 F-005 不提供复习历史查询、批量评价、撤销评价或专门的查看答案接口。
+
+---
+
+## 24. 上传或替换题目图片
+
+### PUT `/api/questions/{questionId}/image`
+
+请求使用：
+
+```http
+Content-Type: multipart/form-data
+```
+
+文件字段名固定为 `file`。成功状态：`200 OK`。
+
+```json
+{
+  "questionId": 42,
+  "imagePath": "questions/42/3ba68e3d-62a6-4fa0-bb6f-3e737bd87c11.png",
+  "contentType": "image/png",
+  "size": 102400
+}
+```
+
+规则：
+
+- 同一接口处理首次上传和替换；
+- 支持 PNG、JPEG、WebP、GIF；
+- 单文件最大 `20 * 1024 * 1024` 字节；
+- 空文件、SVG 和无法识别的内容被拒绝；
+- 服务端根据文件签名识别实际格式，不信任文件名、扩展名或客户端 MIME；
+- 文件名由服务端 UUID 生成，客户端不能提交 `imagePath`；
+- 替换成功后数据库指向新文件，旧文件在事务提交后删除；
+- 数据库事务回滚时删除本次新文件。
+
+---
+
+## 25. 读取题目图片
+
+### GET `/api/questions/{questionId}/image`
+
+成功状态：`200 OK`，响应体为原始图片字节。
+
+响应头：
+
+```http
+Content-Type: image/png | image/jpeg | image/webp | image/gif
+Content-Disposition: inline
+X-Content-Type-Options: nosniff
+Cache-Control: no-store
+```
+
+规则：
+
+- 先验证错题存在，再读取数据库保存的相对路径；
+- 错题不存在返回 `404 QUESTION_NOT_FOUND`；
+- 错题没有图片或对应文件不存在返回 `404 QUESTION_IMAGE_NOT_FOUND`；
+- 响应不包含磁盘绝对路径；
+- 前端详情和每日复习仅在 `imagePath` 非空时请求该接口；
+- 图片失败只影响图片区域，文字内容仍保持可用。
+
+---
+
+## 26. 单独移除题目图片
+
+### DELETE `/api/questions/{questionId}/image`
+
+成功状态：`200 OK`。
+
+```json
+{
+  "message": "题目图片移除成功"
+}
+```
+
+数据库中的 `image_path` 置为 `NULL`，旧文件在事务提交后删除。文字、知识点和
+复习状态不变。错题没有图片时返回 `409 QUESTION_IMAGE_NOT_ATTACHED`。
+
+---
+
+## 27. F-008 图片错误码
+
+| 场景 | HTTP 状态 | code |
+| --- | ---: | --- |
+| 文件为空或未提交 | 400 | `QUESTION_IMAGE_EMPTY` |
+| 文件签名无法识别或格式不支持 | 400 | `QUESTION_IMAGE_UNSUPPORTED_FORMAT` |
+| 文件超过 20 MiB | 413 | `QUESTION_IMAGE_TOO_LARGE` |
+| 错题不存在 | 404 | `QUESTION_NOT_FOUND` |
+| 错题无图片或文件不存在 | 404 | `QUESTION_IMAGE_NOT_FOUND` |
+| 重复移除空图片 | 409 | `QUESTION_IMAGE_NOT_ATTACHED` |
+| 文件系统读写失败 | 500 | `QUESTION_IMAGE_STORAGE_FAILED` |
+
+存储失败响应使用通用信息，不返回服务端绝对路径。
+
+---
+
+## 28. F-008 客户端请求顺序
+
+创建带图片错题：
+
+```text
+POST /api/questions
+→ 获得 questionId
+→ PUT /api/questions/{questionId}/image
+```
+
+如果第二步失败，第一步创建的错题仍然存在，客户端不会重发 POST，而是进入
+编辑页允许只重试图片。
+
+修改时，文字与知识点仍使用 `PUT /api/questions/{id}`，图片上传/替换和移除
+分别使用独立图片接口。只修改文字不会触碰图片；只修改图片时不重复提交未
+变化的文字请求。
