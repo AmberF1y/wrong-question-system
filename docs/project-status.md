@@ -19,11 +19,12 @@
 | F-005 | Completed | 固定规则滚动复习、Flyway 迁移、113 个测试、旧库迁移与手工 API 验收均已完成 |
 | F-006 | Completed | Vue 前端、知识点与错题管理、24 个前端测试、生产构建、浏览器验收、后端回归、数据清理、PR 合并与合并后回归均已完成 |
 | F-007 | Completed | 每日复习前端闭环、63 个前端测试、浏览器验收、异常恢复、数据清理、PR 合并与 main 回归均已完成 |
+| F-008 | Planning | 单题单图上传、读取、替换、移除和文件清理；本地文件系统存储，不含 OCR 或 Dashboard |
 
 当前分支：
 
 ```text
-main
+feature/F-008-question-image-upload
 ```
 
 F-007 从 `main@6e466ee` 创建功能分支，计划、实现、异常恢复修复和验证文档
@@ -691,3 +692,20 @@ Pull Request #7：
 
 F-007 最终状态为 Completed。图片上传、OCR、Dashboard、趋势统计、薄弱知识点、
 复习历史页面、自适应算法、用户系统和部署继续不属于 F-007。
+
+---
+
+## 21. F-008 当前状态
+
+F-008 已进入 Planning，功能分支为：
+
+```text
+feature/F-008-question-image-upload
+```
+
+已确认范围为单题单张可选图片，存储在本地文件系统，MySQL 继续只保存
+`question.image_path` 相对路径。支持 PNG、JPEG、WebP、GIF，单文件上限
+20 MiB。创建、编辑、详情和每日复习接入图片，列表不加载图片。
+
+F-008 不包含 OCR、Dashboard、多图片、对象存储、图片编辑、复习算法调整或
+用户系统。当前尚未完成代码实现、自动化验证、浏览器验收、PR 和合并。
