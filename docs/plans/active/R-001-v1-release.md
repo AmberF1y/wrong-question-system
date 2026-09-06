@@ -350,17 +350,62 @@ aa91cddfafd22560f5f7fad29f6be29d09ab6e85ae53faf5893ab4e08493d5b4
 5dad54f8df0764b60460bde7685e8a4086eb25b92ef14174ae6aef624e0c4b5e
 ```
 
-### 10.6 当前待完成事项
+### 10.6 Pull Request、合并后回归与分支清理
 
-- 提交并推送本次合并前验证记录；
-- 创建中文 Pull Request 并使用 Merge Commit 合并到 `main`；
-- 在合并后的 `main` 上执行最终发布回归；
-- 写入合并提交和合并后证据，归档本计划并删除发布分支；
-- 创建并推送准确指向最终发布提交的带注释标签 `v1.0.0`；
+合并前验证记录提交为：
+
+```text
+e7df593a5a3becbeeff7b1222956104d3089f7d8
+```
+
+Pull Request #9：
+
+```text
+https://github.com/AmberF1y/wrong-question-system/pull/9
+```
+
+- 标题：`发布：完成 v1.0.0 本地版本收口`；
+- base：`main@63a234f14aaf44e5494c1e6f90b5114ca1699c4a`；
+- head：`e7df593a5a3becbeeff7b1222956104d3089f7d8`；
+- 合并方式：Merge Commit；
+- 合并提交：`541b35990dfd744d6b0d65e32d9dc8e765ba576b`；
+- 合并时间：2026-09-06T01:56:35Z（北京时间 2026-09-06 09:56:35）。
+
+在合并后的 `main@541b35990dfd744d6b0d65e32d9dc8e765ba576b`
+上实际通过：
+
+- 后端版本：`1.0.0`；
+- 后端：146 个测试，0 failure、0 error、0 skipped；
+- 前端版本：`1.0.0`；
+- 前端：16 个测试文件、81 个测试；
+- TypeScript 类型检查通过；
+- Vite 生产构建通过；
+- 回归结束工作区 clean。
+
+合并后回归日志 SHA-256：
+
+- 后端测试：`23938ceb87818f14b426f811553a9b71b9c10e2debea6f998ab04ff20cb83099`；
+- 前端测试：`d3d443a13d1aeb31d2fc2b49e7ca00046df6b171b1437dbb63cb8583e6c51a1e`；
+- 前端类型检查：`0dddd234bb3bb4ea0206ba567dac575f6160109274f3dc495876b4db14f2664f`；
+- 前端生产构建：`9fcb2043aa15aa76222243a8a62c090391180f04b09ee44368d049ea5afcdda0`；
+- 合并后回归汇总：`c8ca9518650575d7f764ea6dbe4a3a1a6cd74ddfcedabb45e99ec7f1cdbcb722`。
+
+回归完成后，本地与远端 `release/v1.0.0` 均已删除。清理检查时：
+
+- `main` 与 `origin/main` 均指向 `541b35990dfd744d6b0d65e32d9dc8e765ba576b`；
+- 发布分支 head 已包含在 `main` 合并历史中；
+- 工作区 clean。
+
+### 10.7 当前待完成事项
+
+- 提交包含合并后证据的标签前最终发布记录；
+- 创建并推送准确指向该最终发布内容提交的带注释标签 `v1.0.0`；
 - 创建中文 GitHub Release 并核对标签目标；
+- 写入标签和 Release 事实，将本计划归档到 `docs/plans/completed/`；
 - 确认最终 `main` clean 且与 `origin/main` 同步。
 
-R-001 仍为 `In Progress`，不得在上述事项完成前标记为 `Completed`。
+R-001 仍为 `In Progress`，不得在标签、GitHub Release 和最终归档完成前标记为
+`Completed`。
 
 ---
 

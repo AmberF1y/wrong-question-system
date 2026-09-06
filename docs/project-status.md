@@ -20,12 +20,12 @@
 | F-006 | Completed | Vue 前端、知识点与错题管理、24 个前端测试、生产构建、浏览器验收、后端回归、数据清理、PR 合并与合并后回归均已完成 |
 | F-007 | Completed | 每日复习前端闭环、63 个前端测试、浏览器验收、异常恢复、数据清理、PR 合并与 main 回归均已完成 |
 | F-008 | Completed | 单题单图上传与管理、自动化回归、浏览器验收、PR 合并、main 回归、计划归档和分支清理均已完成 |
-| R-001 | In Progress | v1.0.0 实现、真实使用、正式备份和发布分支回归已完成，等待 PR、main 回归、标签与 Release |
+| R-001 | In Progress | v1.0.0 已合并且 main 回归通过，等待标签、GitHub Release 与最终归档 |
 
 当前分支：
 
 ```text
-release/v1.0.0
+main
 ```
 
 F-007 从 `main@6e466ee` 创建功能分支，计划、实现、异常恢复修复和验证文档
@@ -48,6 +48,8 @@ R-001 从 `main@63a234f` 创建发布分支，只负责把当前已完成的核�
 版本元数据统一为 `1.0.0`；这不改变依赖、API、数据库结构或业务行为。
 发布实现提交为 `10c5c87`；该提交已在 Windows PowerShell 5.1、本地 MySQL
 和固定仓库外图片目录上完成脚本专项、真实使用、正式备份和全量回归验证。
+合并前验证记录提交为 `e7df593`。Pull Request #9 已使用 Merge Commit 合并，
+合并提交为 `541b359`；合并后的 `main` 全量回归通过，发布分支已删除。
 
 F-005 从 `main` 的 `bba3122` 开始，功能分支提交为：
 
@@ -917,12 +919,38 @@ release/v1.0.0
 - 发布分支回归汇总：`8b0f872839c44821982265c3f708faad723c39820f751f0ad7cec5c30d85e267`；
 - 发布验证总汇：`5dad54f8df0764b60460bde7685e8a4086eb25b92ef14174ae6aef624e0c4b5e`。
 
+Pull Request 与合并后状态：
+
+- Pull Request #9：
+  `https://github.com/AmberF1y/wrong-question-system/pull/9`；
+- head：`e7df593a5a3becbeeff7b1222956104d3089f7d8`；
+- 合并方式：Merge Commit；
+- 合并提交：`541b35990dfd744d6b0d65e32d9dc8e765ba576b`；
+- 合并时间：2026-09-06T01:56:35Z（北京时间 2026-09-06 09:56:35）；
+- 本地和远端 `release/v1.0.0` 均已删除；
+- 分支删除后 `main` 与 `origin/main` 均为 `541b359`，工作区 clean。
+
+合并后的 `main@541b359` 已实际通过：
+
+- 后端版本 `1.0.0`，146 个测试通过；
+- 前端版本 `1.0.0`，16 个测试文件共 81 个测试通过；
+- TypeScript 类型检查通过；
+- Vite 生产构建通过；
+- 回归结束工作区 clean。
+
+合并后证据 SHA-256：
+
+- 后端测试：`23938ceb87818f14b426f811553a9b71b9c10e2debea6f998ab04ff20cb83099`；
+- 前端测试：`d3d443a13d1aeb31d2fc2b49e7ca00046df6b171b1437dbb63cb8583e6c51a1e`；
+- 前端类型检查：`0dddd234bb3bb4ea0206ba567dac575f6160109274f3dc495876b4db14f2664f`；
+- 前端生产构建：`9fcb2043aa15aa76222243a8a62c090391180f04b09ee44368d049ea5afcdda0`；
+- 合并后回归汇总：`c8ca9518650575d7f764ea6dbe4a3a1a6cd74ddfcedabb45e99ec7f1cdbcb722`。
+
 尚未完成且不得提前写成通过：
 
-- Pull Request 与 Merge Commit；
-- 合并后 `main` 的最终发布回归；
-- 计划归档与发布分支删除；
+- 提交标签前最终发布记录；
 - `v1.0.0` 带注释标签和中文 GitHub Release；
+- 标签与 Release 创建后的计划归档和状态完成记录；
 - 最终 `main` 与 `origin/main` 同步核对。
 
 只有上述项目全部完成后，R-001 才能改为 `Completed`。
