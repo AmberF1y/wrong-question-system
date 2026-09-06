@@ -6,9 +6,9 @@
 | --- | --- |
 | 编号 | R-001 |
 | 名称 | v1.0.0 发布收口与真实使用 |
-| 状态 | In Progress |
+| 状态 | Completed |
 | 基线 | `main@63a234f14aaf44e5494c1e6f90b5114ca1699c4a` |
-| 发布分支 | `release/v1.0.0` |
+| 发布分支 | `release/v1.0.0`（已删除） |
 | 目标版本 | `v1.0.0` |
 | 目标环境 | Windows 桌面端、单用户、本地 MySQL、本地文件系统 |
 
@@ -396,16 +396,34 @@ https://github.com/AmberF1y/wrong-question-system/pull/9
 - 发布分支 head 已包含在 `main` 合并历史中；
 - 工作区 clean。
 
-### 10.7 当前待完成事项
+### 10.7 标签、GitHub Release 与最终归档
 
-- 提交包含合并后证据的标签前最终发布记录；
-- 创建并推送准确指向该最终发布内容提交的带注释标签 `v1.0.0`；
-- 创建中文 GitHub Release 并核对标签目标；
-- 写入标签和 Release 事实，将本计划归档到 `docs/plans/completed/`；
-- 确认最终 `main` clean 且与 `origin/main` 同步。
+标签前最终发布记录提交为：
 
-R-001 仍为 `In Progress`，不得在标签、GitHub Release 和最终归档完成前标记为
-`Completed`。
+```text
+99f31ec39150312f42e4ea0d019c17d778a11bdf
+```
+
+2026-09-06 已完成并核对：
+
+- 创建并推送带注释标签 `v1.0.0`；
+- 标签对象为 `de310fc8534005b4f10e0dc6f62b2ed22ea15509`；
+- 本地与远端标签均解析到
+  `99f31ec39150312f42e4ea0d019c17d778a11bdf`；
+- 标签目标与创建标签时的 `main`、`origin/main` 完全一致；
+- GitHub Release 已使用标签 `v1.0.0` 发布；
+- Release 标题为 `v1.0.0：错题整理与滚动复习本地第一版`；
+- Release 已标记为 `Latest`，未标记为预发布版本；
+- Release 地址为
+  `https://github.com/AmberF1y/wrong-question-system/releases/tag/v1.0.0`；
+- 本计划归档到 `docs/plans/completed/R-001-v1-release.md`；
+- 最终归档只修改 README、项目状态、发布说明和计划位置，不改变应用代码、
+  数据库迁移、测试或版本标签内的内容。
+
+最终状态归档提交位于 `v1.0.0` 标签之后，因此标签继续准确表示已经验证的
+第一版发布内容，归档提交只记录标签与 Release 创建后才能确认的事实。
+
+R-001 的完成定义已全部满足，最终状态为 `Completed`。
 
 ---
 
