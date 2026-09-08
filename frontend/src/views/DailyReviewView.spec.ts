@@ -188,6 +188,34 @@ describe('DailyReviewView', () => {
     expect(wrapper.find('[data-testid="rating-panel"]').exists()).toBe(true)
   })
 
+  it('renders formulas in the review question and every revealed answer field', async () => {
+    mockedGetNextDue.mockResolvedValue({
+      ...dueResponse,
+      question: {
+        ...dueQuestion,
+        questionText: '当 $x\\to0$ 时求极限',
+      },
+    })
+    mockedGetQuestion.mockResolvedValue({
+      ...questionDetail,
+      wrongAnswer: '$0$',
+      correctAnswer: '$1$',
+      analysis: '$$\\lim_{x\\to0}\\frac{\\sin x}{x}=1$$',
+      errorReason: '遗漏等价无穷小 $\\sin x\\sim x$',
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="review-question-text"]').find('.katex').exists()).toBe(true)
+
+    await revealAnswer(wrapper)
+
+    const answerPanel = wrapper.get('[data-testid="answer-panel"]')
+    expect(answerPanel.findAllComponents({ name: 'MathText' })).toHaveLength(4)
+    expect(answerPanel.findAll('[data-math-inline="true"]')).toHaveLength(3)
+    expect(answerPanel.findAll('[data-math-display="true"]')).toHaveLength(1)
+  })
+
   it('keeps the question hidden from rating when answer loading fails and supports retry', async () => {
     mockedGetNextDue.mockResolvedValue(dueResponse)
     mockedGetQuestion

@@ -145,6 +145,23 @@ describe('QuestionDetailView reactivation', () => {
     )
   })
 
+  it('renders formulas in all five user text fields', async () => {
+    mockedGetQuestion.mockResolvedValue({
+      ...activeQuestion,
+      questionText: '求 $x^2$ 的导数',
+      wrongAnswer: '$x$',
+      correctAnswer: '$2x$',
+      analysis: '$$\\frac{d}{dx}x^2=2x$$',
+      errorReason: '漏写系数 $2$',
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.findAllComponents({ name: 'MathText' })).toHaveLength(5)
+    expect(wrapper.findAll('[data-math-inline="true"]')).toHaveLength(4)
+    expect(wrapper.findAll('[data-math-display="true"]')).toHaveLength(1)
+  })
+
   it('shows the action for a mastered question and does nothing after cancellation', async () => {
     mockedGetQuestion.mockResolvedValue(masteredQuestion)
     mocks.confirm.mockRejectedValue(new Error('cancelled'))

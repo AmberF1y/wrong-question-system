@@ -9,25 +9,26 @@
 
     <section class="answer-section answer-section--danger">
       <h3>我的错误答案</h3>
-      <div class="content-prose">{{ question.wrongAnswer }}</div>
+      <MathText :text="question.wrongAnswer" class="content-prose" />
     </section>
     <section class="answer-section answer-section--success">
       <h3>正确答案</h3>
-      <div class="content-prose">{{ question.correctAnswer }}</div>
+      <MathText :text="question.correctAnswer" class="content-prose" />
     </section>
     <section class="answer-section">
       <h3>解析</h3>
-      <div class="content-prose">{{ question.analysis }}</div>
+      <MathText :text="question.analysis" class="content-prose" />
     </section>
     <section class="answer-section answer-section--warning">
       <h3>错误原因</h3>
-      <div class="content-prose">{{ question.errorReason }}</div>
+      <MathText :text="question.errorReason" class="content-prose" />
     </section>
   </el-card>
 </template>
 
 <script setup lang="ts">
 import type { QuestionDetail } from '../types/question'
+import MathText from './MathText.vue'
 
 defineProps<{
   question: QuestionDetail

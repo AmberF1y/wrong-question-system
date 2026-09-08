@@ -15,9 +15,11 @@
       </div>
     </template>
 
-    <div class="content-prose question-content" data-testid="review-question-text">
-      {{ question.questionText }}
-    </div>
+    <MathText
+      :text="question.questionText"
+      class="content-prose question-content"
+      data-testid="review-question-text"
+    />
 
     <QuestionImageDisplay v-if="imageUrl" :src="imageUrl" class="review-question-image" />
 
@@ -39,6 +41,7 @@
 <script setup lang="ts">
 import type { DueQuestion } from '../types/review'
 import { formatDate } from '../utils/date-time'
+import MathText from './MathText.vue'
 import QuestionImageDisplay from './QuestionImageDisplay.vue'
 
 defineProps<{

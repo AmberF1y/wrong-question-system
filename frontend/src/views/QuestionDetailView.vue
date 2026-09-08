@@ -176,6 +176,7 @@ import { deleteQuestion, getQuestion, getQuestionImageUrl } from '../api/questio
 import { reactivateQuestion } from '../api/reviews'
 import AppEmptyState from '../components/AppEmptyState.vue'
 import AppPageHeader from '../components/AppPageHeader.vue'
+import MathText from '../components/MathText.vue'
 import QuestionImageDisplay from '../components/QuestionImageDisplay.vue'
 import ReviewStatusTag from '../components/ReviewStatusTag.vue'
 import type { QuestionDetail } from '../types/question'
@@ -196,7 +197,7 @@ const DetailSection = defineComponent({
     return () =>
       h('section', { class: ['detail-section', `detail-section--${props.tone}`] }, [
         h('h2', props.title),
-        h('div', { class: 'content-prose' }, props.content),
+        h(MathText, { class: 'content-prose', text: props.content }),
       ])
   },
 })

@@ -72,6 +72,40 @@
           {{ clientFieldErrors.correctAnswer }}
         </p>
       </el-form-item>
+
+      <details class="formula-help" data-testid="formula-help">
+        <summary>公式输入说明与预览</summary>
+        <div class="formula-help__body">
+          <p>
+            普通文字直接输入；行内公式使用 <code>$...$</code>，独立公式使用
+            <code>$$...$$</code>，需要显示美元符号时输入 <code>\$</code>。
+          </p>
+          <ul>
+            <li>分式：<code>$\frac{a}{b}$</code></li>
+            <li>根号：<code>$\sqrt{x}$</code> 或 <code>$\sqrt[n]{x}$</code></li>
+            <li>极限：<code>$\lim_{x\to0}\frac{\sin x}{x}=1$</code></li>
+            <li>积分：<code>$\int_a^b f(x)\,dx$</code></li>
+            <li>求和：<code>$\sum_{n=1}^{\infty} a_n$</code></li>
+          </ul>
+
+          <div class="formula-preview">
+            <h3>当前内容预览</h3>
+            <p v-if="previewFields.length === 0" class="formula-preview__empty">
+              输入题目、答案或复盘内容后，这里会显示排版效果。
+            </p>
+            <template v-else>
+              <section
+                v-for="field in previewFields"
+                :key="field.key"
+                class="formula-preview__section"
+              >
+                <h4>{{ field.label }}</h4>
+                <MathText :text="field.text" class="content-prose" />
+              </section>
+            </template>
+          </div>
+        </div>
+      </details>
     </el-card>
 
     <el-card class="page-card form-section" shadow="never">
@@ -176,11 +210,12 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import type { KnowledgePointTreeNode } from '../types/knowledge-point'
 import type { QuestionFormPayload, QuestionImageChange } from '../types/question'
 import { areKnowledgePointsInSameRoot } from '../utils/knowledge-tree'
 import KnowledgePointSelector from './KnowledgePointSelector.vue'
+import MathText from './MathText.vue'
 import QuestionImageField from './QuestionImageField.vue'
 
 const props = withDefaults(
@@ -213,6 +248,15 @@ const imageChange = ref<QuestionImageChange>({
 })
 const clientFieldErrors = reactive<Record<keyof QuestionFormPayload, string>>(
   emptyClientFieldErrors(),
+)
+const previewFields = computed(() =>
+  [
+    { key: 'questionText', label: '题目', text: form.questionText },
+    { key: 'wrongAnswer', label: '我的错误答案', text: form.wrongAnswer },
+    { key: 'correctAnswer', label: '正确答案', text: form.correctAnswer },
+    { key: 'analysis', label: '解析', text: form.analysis },
+    { key: 'errorReason', label: '错误原因', text: form.errorReason },
+  ].filter((field) => field.text.length > 0),
 )
 
 function emptyForm(): QuestionFormPayload {
@@ -344,6 +388,80 @@ watch(
   color: var(--el-color-danger);
   font-size: 0.78rem;
   line-height: 1.4;
+}
+
+.formula-help {
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.formula-help summary {
+  padding: 12px 14px;
+  color: var(--app-blue);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.formula-help__body {
+  padding: 0 14px 14px;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.formula-help__body > p {
+  margin: 0 0 8px;
+}
+
+.formula-help__body ul {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.formula-help code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #e8eef7;
+  color: #334155;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.formula-preview {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--app-border);
+}
+
+.formula-preview h3,
+.formula-preview h4 {
+  margin: 0;
+  color: var(--app-navy);
+}
+
+.formula-preview h3 {
+  margin-bottom: 10px;
+  font-size: 0.92rem;
+}
+
+.formula-preview h4 {
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+}
+
+.formula-preview__empty {
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.formula-preview__section {
+  min-width: 0;
+  padding: 10px 0;
+  border-top: 1px dashed #d7e0eb;
+}
+
+.formula-preview__section:first-of-type {
+  border-top: 0;
 }
 
 @media (max-width: 680px) {
