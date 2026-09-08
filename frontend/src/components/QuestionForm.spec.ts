@@ -3,6 +3,7 @@ import ElementPlus from 'element-plus'
 import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import type { KnowledgePointTreeNode } from '../types/knowledge-point'
+import type { QuestionFormPayload } from '../types/question'
 import QuestionForm from './QuestionForm.vue'
 
 const tree: KnowledgePointTreeNode[] = [
@@ -56,6 +57,45 @@ async function fillTextFields(wrapper: ReturnType<typeof mountForm>): Promise<vo
 }
 
 describe('QuestionForm', () => {
+  it('shows a folded formula guide and previews raw LaTeX without changing the input', async () => {
+    const wrapper = mountForm()
+    const formulaText = '当 $x\\to0$ 时，$\\frac{\\sin x}{x}\\to1$。'
+
+    expect(wrapper.get('[data-testid="formula-help"]').attributes('open')).toBeUndefined()
+    expect(wrapper.get('[data-testid="formula-help"]').text()).toContain('独立公式')
+    expect(wrapper.get('[data-testid="formula-help"]').text()).toContain('\\sum')
+
+    await wrapper.findAll('textarea')[0].setValue(formulaText)
+
+    expect(wrapper.findAllComponents({ name: 'MathText' })).toHaveLength(1)
+    expect(wrapper.getComponent({ name: 'MathText' }).props('text')).toBe(formulaText)
+    expect(wrapper.findAll('.katex')).toHaveLength(2)
+    expect(wrapper.findAll('textarea')[0].element.value).toBe(formulaText)
+  })
+
+  it('submits the original LaTeX text instead of generated HTML', async () => {
+    const wrapper = mountForm()
+    const values = [
+      '计算 $x^2$',
+      '误写为 $x$',
+      '答案是 $x^2$',
+      '使用 $$x\\cdot x=x^2$$',
+      '遗漏指数',
+    ]
+
+    await Promise.all(
+      wrapper.findAll('textarea').map((textarea, index) => textarea.setValue(values[index])),
+    )
+    wrapper.findComponent({ name: 'KnowledgePointSelector' }).vm.$emit('update:modelValue', [10, 11])
+    await nextTick()
+    await wrapper.find('form').trigger('submit')
+
+    const payload = wrapper.emitted('submit')?.[0]?.[0] as QuestionFormPayload
+    expect(payload.questionText).toBe(values[0])
+    expect(payload.analysis).toBe(values[3])
+    expect(payload.questionText).not.toContain('<span')
+  })
+
   it('emits a trimmed payload after valid input', async () => {
     const wrapper = mountForm()
     await fillTextFields(wrapper)

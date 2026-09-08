@@ -90,7 +90,7 @@
           <el-table-column label="题目" min-width="300">
             <template #default="{ row }">
               <button class="question-link" type="button" @click="openDetail(row.id)">
-                {{ row.questionText }}
+                <MathText :text="row.questionText" />
               </button>
             </template>
           </el-table-column>
@@ -162,6 +162,7 @@ import { useRouter } from 'vue-router'
 import { deleteQuestion, getQuestions } from '../api/questions'
 import AppEmptyState from '../components/AppEmptyState.vue'
 import AppPageHeader from '../components/AppPageHeader.vue'
+import MathText from '../components/MathText.vue'
 import ReviewStatusTag from '../components/ReviewStatusTag.vue'
 import { useKnowledgePointStore } from '../stores/knowledge-points'
 import type { QuestionPageResponse, ReviewStatus } from '../types/question'
