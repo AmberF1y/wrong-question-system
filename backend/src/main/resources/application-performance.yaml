@@ -1,0 +1,35 @@
+server:
+  address: 127.0.0.1
+  port: ${PERF_SERVER_PORT:18080}
+
+spring:
+  datasource:
+    url: jdbc:mysql://${PERF_DB_HOST:127.0.0.1}:${PERF_DB_PORT:3306}/${PERF_DATABASE_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${PERF_DB_USER:root}
+    password: ${DB_PASSWORD}
+
+  flyway:
+    baseline-on-migrate: false
+    clean-disabled: true
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        generate_statistics: false
+
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+
+app:
+  storage:
+    question-image-directory: ${PERF_IMAGE_DIRECTORY}
+  performance:
+    expected-database: ${PERF_DATABASE_NAME}
+    environment-id: ${PERF_ENVIRONMENT_ID}
+    git-commit: ${PERF_GIT_COMMIT}
+    repository-root: ${PERF_REPOSITORY_ROOT}
+    production-image-directory: ${PERF_PRODUCTION_IMAGE_DIRECTORY:D:/WrongQuestionData/question-images}
+    production-backup-directory: ${PERF_PRODUCTION_BACKUP_DIRECTORY:D:/WrongQuestionBackups}
