@@ -10,3 +10,7 @@ target/
 
 # Java
 *.class
+
+# Local performance-test runtime state and raw results
+performance/.local/
+performance/results/
