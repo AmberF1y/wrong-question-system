@@ -82,3 +82,5 @@
 - Vite 生产构建：通过，保留既有主 chunk 超过 500 kB 警告；
 - Flyway V3 已在 `wrong_question_system_test` 成功迁移并通过结构断言；
 - 浏览器人工验收：用户于 2026-09-23 确认完成；未单独保存详细验收证据。
+- 功能提交：`4139e4b51fae6b1659797ac2b9135a43379a1c8e`；
+- 合并提交：`d3ab34a9f8cc578f75470904894b1bf5c258ee46`，已推送至 `origin/main`。

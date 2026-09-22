@@ -36,6 +36,9 @@ F-010 从 `d522f809` 创建独立功能分支。已实现普通到期队列清�
 `docs/plans/completed/F-010-mastered-random-spot-check.md`。后端 167 个测试、
 前端 17 个测试文件共 119 个测试、TypeScript 类型检查和生产构建均已通过；
 用户于 2026-09-23 确认完成浏览器人工验收，F-010 标记为 Completed。
+功能提交为 `4139e4b51fae6b1659797ac2b9135a43379a1c8e`，已使用 Merge Commit
+合并到 `main`；合并提交为 `d3ab34a9f8cc578f75470904894b1bf5c258ee46`，
+并已推送至 `origin/main`。
 
 F-007 从 `main@6e466ee` 创建功能分支，计划、实现、异常恢复修复和验证文档
 提交依次为 `e803f19`、`12a911b`、`de3858c`、`7494ce5`。Pull Request
@@ -1014,3 +1017,6 @@ F-010 在不引入自适应算法或用户配置的前提下，实现：
 用户于 2026-09-23 确认完成真实浏览器人工验收，F-010 标记为 Completed，
 计划归档至 completed 目录。Vite 主入口 chunk 超过 500 kB 和 Flyway 对
 MySQL 9.6 的版本提示为已知非阻塞警告。
+
+功能提交 `4139e4b` 已通过中文 Merge Commit `d3ab34a` 合并到 `main`，并已
+推送至 GitHub。合并提交与功能提交的文件树一致，未引入额外业务变更。
