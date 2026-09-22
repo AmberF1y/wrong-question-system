@@ -3,12 +3,20 @@
     <template #header>
       <div class="question-header">
         <div>
-          <span class="question-header__eyebrow">当前题目</span>
+          <span class="question-header__eyebrow">
+            {{ mode === 'SPOT_CHECK' ? '已掌握题抽查' : '当前题目' }}
+          </span>
           <h2>{{ question.subject }}</h2>
         </div>
         <div class="question-meta">
-          <el-tag effect="plain">到期：{{ formatDate(question.nextReviewDate) }}</el-tag>
-          <span data-testid="due-count">
+          <el-tag v-if="mode === 'SPOT_CHECK'" type="success" effect="plain">
+            随机抽查
+          </el-tag>
+          <el-tag v-else effect="plain">到期：{{ formatDate(dueDate) }}</el-tag>
+          <span v-if="mode === 'SPOT_CHECK'" data-testid="spot-check-count">
+            当前有 {{ dueCount }} 道符合抽查条件
+          </span>
+          <span v-else data-testid="due-count">
             本次获取时待复习 {{ dueCount }} 道（包含本题）
           </span>
         </div>
@@ -24,7 +32,13 @@
     <QuestionImageDisplay v-if="imageUrl" :src="imageUrl" class="review-question-image" />
 
     <div v-if="!answerRevealed" class="question-actions">
-      <p>请先在纸上重新作答，系统不会保存本次作答内容。</p>
+      <p>
+        {{
+          mode === 'SPOT_CHECK'
+            ? '请先重新作答，确认自己是否仍然掌握这道题。'
+            : '请先在纸上重新作答，系统不会保存本次作答内容。'
+        }}
+      </p>
       <el-button
         type="primary"
         :loading="loadingAnswer"
@@ -39,19 +53,27 @@
 </template>
 
 <script setup lang="ts">
-import type { DueQuestion } from '../types/review'
+import { computed } from 'vue'
+import type { DueQuestion, SpotCheckQuestion } from '../types/review'
 import { formatDate } from '../utils/date-time'
 import MathText from './MathText.vue'
 import QuestionImageDisplay from './QuestionImageDisplay.vue'
 
-defineProps<{
-  question: DueQuestion
+const props = withDefaults(defineProps<{
+  question: DueQuestion | SpotCheckQuestion
   dueCount: number
+  mode?: 'DUE' | 'SPOT_CHECK'
   loadingAnswer: boolean
   answerRevealed: boolean
   imageUrl?: string
   disabled?: boolean
-}>()
+}>(), {
+  mode: 'DUE',
+})
+
+const dueDate = computed(() =>
+  'nextReviewDate' in props.question ? props.question.nextReviewDate : null,
+)
 
 const emit = defineEmits<{
   'show-answer': []

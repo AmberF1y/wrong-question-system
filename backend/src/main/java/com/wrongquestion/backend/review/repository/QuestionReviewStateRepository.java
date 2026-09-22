@@ -1,6 +1,7 @@
 package com.wrongquestion.backend.review.repository;
 
 import com.wrongquestion.backend.review.entity.QuestionReviewState;
+import com.wrongquestion.backend.review.entity.ReviewEventType;
 import com.wrongquestion.backend.review.entity.ReviewStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -58,6 +59,49 @@ public interface QuestionReviewStateRepository
     List<QuestionReviewState> findDueBySubject(
             @Param("reviewStatus") ReviewStatus reviewStatus,
             @Param("today") LocalDate today,
+            @Param("subject") String subject,
+            Pageable pageable
+    );
+
+    @Query("""
+            select count(state)
+            from QuestionReviewState state
+            where state.reviewStatus = :reviewStatus
+              and (:subject is null or state.question.subject = :subject)
+              and not exists (
+                  select record.id
+                  from ReviewRecord record
+                  where record.question = state.question
+                    and record.eventType = :eventType
+                    and record.businessDate >= :earliestBusinessDate
+              )
+            """)
+    long countSpotCheckCandidates(
+            @Param("reviewStatus") ReviewStatus reviewStatus,
+            @Param("eventType") ReviewEventType eventType,
+            @Param("earliestBusinessDate") LocalDate earliestBusinessDate,
+            @Param("subject") String subject
+    );
+
+    @Query("""
+            select state
+            from QuestionReviewState state
+            join fetch state.question question
+            where state.reviewStatus = :reviewStatus
+              and (:subject is null or question.subject = :subject)
+              and not exists (
+                  select record.id
+                  from ReviewRecord record
+                  where record.question = state.question
+                    and record.eventType = :eventType
+                    and record.businessDate >= :earliestBusinessDate
+              )
+            order by state.questionId asc
+            """)
+    List<QuestionReviewState> findSpotCheckCandidates(
+            @Param("reviewStatus") ReviewStatus reviewStatus,
+            @Param("eventType") ReviewEventType eventType,
+            @Param("earliestBusinessDate") LocalDate earliestBusinessDate,
             @Param("subject") String subject,
             Pageable pageable
     );

@@ -16,6 +16,7 @@ F-001～F-008 与 R-001 均已完成。R-001 已完成版本号、产品边界�
 - 四级掌握程度评价；
 - 连续两次“熟练”后进入已掌握状态；
 - 已掌握错题手动重新加入复习；
+- 普通到期队列清空后的每日已掌握题随机抽查；
 - 复习当前状态与不可变事件历史；
 - 基于 JPA `@Version` 的乐观锁并发保护；
 - Flyway 数据库版本迁移；
@@ -37,9 +38,9 @@ F-001～F-008 与 R-001 均已完成。R-001 已完成版本号、产品边界�
 当前不包含 OCR、Dashboard、趋势统计、薄弱知识点、复习历史页面、自适应
 复习算法、用户系统、对象存储、多图片和部署。
 
-当前 `feature/F-009-math-formula-rendering` 分支已在 `v1.0.0` 基线上完成
-LaTeX 数学公式输入、预览和安全展示，并通过自动化验证与浏览器人工验收；
-该能力不属于既有 `v1.0.0` 标签内容。
+F-009 数学公式渲染和 F-010 已掌握题随机抽查均已完成自动化验证与浏览器
+人工验收。F-010 在普通到期队列清空后每日最多提供一道已掌握题抽查，并具备
+30 天同题冷却、失败重新入队和并发保护；该能力不属于既有 `v1.0.0` 标签内容。
 
 `v1.0.0` 的第一版完成标准是“录入 → 保存 → 调度 → 复习 → 评价 → 再调度”
 核心闭环可以在 Windows 桌面浏览器中长期自用。Dashboard、学习反馈和部署
@@ -83,6 +84,7 @@ sql/create-test-database.sql
 ```text
 backend/src/main/resources/db/migration/V1__initial_schema.sql
 backend/src/main/resources/db/migration/V2__add_rolling_review.sql
+backend/src/main/resources/db/migration/V3__add_mastered_spot_check.sql
 ```
 
 Hibernate 使用 `ddl-auto: validate` 校验 Entity 与迁移后的结构是否一致，不负责建表。
@@ -233,7 +235,9 @@ Flyway 会把现有 F-004 结构登记为 V1，再执行 V2。迁移成功并核
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
 | GET | `/api/reviews/due/next` | 获取当前下一道到期题和到期总数 |
+| GET | `/api/reviews/mastered/spot-check` | 获取今日已掌握题抽查状态与候选题 |
 | POST | `/api/reviews/{questionId}/evaluations` | 提交四级复习评价 |
+| POST | `/api/reviews/{questionId}/spot-check-evaluations` | 提交已掌握题抽查评价 |
 | POST | `/api/reviews/{questionId}/reactivate` | 重新加入已掌握错题 |
 
 答案和解析继续通过 `GET /api/questions/{id}` 获取。

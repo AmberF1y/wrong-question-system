@@ -10,6 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 class FlywayMigrationTest {
@@ -29,10 +30,10 @@ class FlywayMigrationTest {
     }
 
     @Test
-    void shouldApplyMigrationsThroughVersionTwo() {
+    void shouldApplyMigrationsThroughVersionThree() {
         assertNotNull(flyway.info().current());
         assertEquals(
-                "2",
+                "3",
                 flyway.info().current().getVersion().toString()
         );
 
@@ -47,7 +48,7 @@ class FlywayMigrationTest {
                 String.class
         );
 
-        assertEquals(List.of("1", "2"), successfulVersions);
+        assertEquals(List.of("1", "2", "3"), successfulVersions);
     }
 
     @Test
@@ -111,5 +112,61 @@ class FlywayMigrationTest {
                 reviewRecordIndexColumns
         );
         assertEquals("subject", questionSubjectIndexColumns);
+    }
+
+    @Test
+    void shouldCreateMasteredSpotCheckConstraintsAndIndexes() {
+        String spotCheckIndexColumns = jdbcTemplate.queryForObject(
+                """
+                SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index)
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'review_record'
+                  AND index_name = 'idx_review_record_event_date_question'
+                """,
+                String.class
+        );
+        String dailyUniqueColumns = jdbcTemplate.queryForObject(
+                """
+                SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index)
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'review_record'
+                  AND index_name = 'uk_review_record_spot_check_date'
+                  AND non_unique = 0
+                """,
+                String.class
+        );
+        String generationExpression = jdbcTemplate.queryForObject(
+                """
+                SELECT generation_expression
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'review_record'
+                  AND column_name = 'spot_check_business_date'
+                """,
+                String.class
+        );
+        String eventConstraint = jdbcTemplate.queryForObject(
+                """
+                SELECT check_clause
+                FROM information_schema.check_constraints
+                WHERE constraint_schema = DATABASE()
+                  AND constraint_name = 'chk_review_record_event_consistency'
+                """,
+                String.class
+        );
+
+        assertEquals(
+                "event_type,business_date,question_id",
+                spotCheckIndexColumns
+        );
+        assertEquals("spot_check_business_date", dailyUniqueColumns);
+        assertNotNull(generationExpression);
+        assertTrue(generationExpression.contains("event_type"));
+        assertTrue(generationExpression.contains("business_date"));
+        assertTrue(generationExpression.contains("SPOT_CHECK"));
+        assertNotNull(eventConstraint);
+        assertTrue(eventConstraint.contains("SPOT_CHECK"));
     }
 }

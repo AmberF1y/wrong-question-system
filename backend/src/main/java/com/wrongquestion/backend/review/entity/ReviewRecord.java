@@ -102,6 +102,28 @@ public class ReviewRecord {
         );
     }
 
+    public static ReviewRecord spotCheck(
+            Question question,
+            ReviewRating rating,
+            LocalDate businessDate,
+            Instant occurredAt,
+            ReviewStatus resultingStatus,
+            LocalDate resultingNextReviewDate,
+            int resultingProficientCount
+    ) {
+        return new ReviewRecord(
+                question,
+                ReviewEventType.SPOT_CHECK,
+                rating,
+                businessDate,
+                occurredAt,
+                null,
+                resultingStatus,
+                resultingNextReviewDate,
+                resultingProficientCount
+        );
+    }
+
     private ReviewRecord(
             Question question,
             ReviewEventType eventType,

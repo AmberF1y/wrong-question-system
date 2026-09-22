@@ -2,11 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import http from './http'
 import {
   getNextDueReview,
+  getTodayMasteredSpotCheck,
   reactivateQuestion,
+  submitMasteredSpotCheckEvaluation,
   submitReviewEvaluation,
 } from './reviews'
 import type {
   DueReviewResponse,
+  MasteredSpotCheckResponse,
   ReviewActionResponse,
   ReviewRating,
 } from '../types/review'
@@ -24,6 +27,13 @@ const mockedPost = vi.mocked(http.post)
 const dueResponse: DueReviewResponse = {
   dueCount: 0,
   question: null,
+}
+
+const spotCheckResponse: MasteredSpotCheckResponse = {
+  completedToday: false,
+  eligibleCount: 1,
+  cooldownDays: 30,
+  question: { id: 77, questionText: '抽查题', imagePath: null, subject: '数学' },
 }
 
 const actionResponse: ReviewActionResponse = {
@@ -62,6 +72,17 @@ describe('review API', () => {
     })
   })
 
+  it('gets the mastered spot check with the selected subject', async () => {
+    mockedGet.mockResolvedValue({ data: spotCheckResponse } as never)
+
+    await expect(getTodayMasteredSpotCheck('数学')).resolves.toEqual(
+      spotCheckResponse,
+    )
+    expect(mockedGet).toHaveBeenCalledWith('/reviews/mastered/spot-check', {
+      params: { subject: '数学' },
+    })
+  })
+
   it.each<ReviewRating>([
     'NOT_KNOWN',
     'FUZZY',
@@ -75,6 +96,27 @@ describe('review API', () => {
     await submitReviewEvaluation(42, rating)
 
     expect(mockedPost).toHaveBeenCalledWith('/reviews/42/evaluations', { rating })
+  })
+
+  it('submits a mastered spot-check rating with its review scope', async () => {
+    const response: ReviewActionResponse = {
+      ...actionResponse,
+      eventType: 'SPOT_CHECK',
+      rating: 'PROFICIENT',
+      reviewStatus: 'MASTERED',
+      nextReviewDate: null,
+      consecutiveProficientCount: 2,
+    }
+    mockedPost.mockResolvedValue({ data: response } as never)
+
+    await expect(
+      submitMasteredSpotCheckEvaluation(77, 'PROFICIENT', '数学'),
+    ).resolves.toEqual(response)
+    expect(mockedPost).toHaveBeenCalledWith(
+      '/reviews/77/spot-check-evaluations',
+      { rating: 'PROFICIENT' },
+      { params: { subject: '数学' } },
+    )
   })
 
   it('reactivates a question without a fabricated request body', async () => {
