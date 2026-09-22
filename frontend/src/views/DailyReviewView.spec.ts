@@ -5,10 +5,16 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getKnowledgePointTree } from '../api/knowledge-points'
 import { getQuestion, getQuestionImageUrl } from '../api/questions'
-import { getNextDueReview, submitReviewEvaluation } from '../api/reviews'
+import {
+  getNextDueReview,
+  getTodayMasteredSpotCheck,
+  submitMasteredSpotCheckEvaluation,
+  submitReviewEvaluation,
+} from '../api/reviews'
 import type { QuestionDetail } from '../types/question'
 import type {
   DueReviewResponse,
+  MasteredSpotCheckResponse,
   ReviewActionResponse,
 } from '../types/review'
 import DailyReviewView from './DailyReviewView.vue'
@@ -24,6 +30,8 @@ vi.mock('../api/questions', () => ({
 
 vi.mock('../api/reviews', () => ({
   getNextDueReview: vi.fn(),
+  getTodayMasteredSpotCheck: vi.fn(),
+  submitMasteredSpotCheckEvaluation: vi.fn(),
   submitReviewEvaluation: vi.fn(),
 }))
 
@@ -31,6 +39,8 @@ const mockedGetTree = vi.mocked(getKnowledgePointTree)
 const mockedGetQuestion = vi.mocked(getQuestion)
 const mockedGetQuestionImageUrl = vi.mocked(getQuestionImageUrl)
 const mockedGetNextDue = vi.mocked(getNextDueReview)
+const mockedGetSpotCheck = vi.mocked(getTodayMasteredSpotCheck)
+const mockedSubmitSpotCheck = vi.mocked(submitMasteredSpotCheckEvaluation)
 const mockedSubmitEvaluation = vi.mocked(submitReviewEvaluation)
 
 const dueQuestion = {
@@ -51,6 +61,25 @@ const emptyResponse: DueReviewResponse = {
   question: null,
 }
 
+const emptySpotCheckResponse: MasteredSpotCheckResponse = {
+  completedToday: false,
+  eligibleCount: 0,
+  cooldownDays: 30,
+  question: null,
+}
+
+const spotCheckResponse: MasteredSpotCheckResponse = {
+  completedToday: false,
+  eligibleCount: 4,
+  cooldownDays: 30,
+  question: {
+    id: 77,
+    questionText: '计算 $\\int_0^1 x\\,dx$',
+    imagePath: null,
+    subject: '数学',
+  },
+}
+
 const questionDetail: QuestionDetail = {
   id: 42,
   questionText: dueQuestion.questionText,
@@ -67,6 +96,16 @@ const questionDetail: QuestionDetail = {
   nextReviewDate: '2026-09-04',
   consecutiveProficientCount: 1,
   lastReviewedAt: '2026-08-21T02:00:00Z',
+}
+
+const spotCheckDetail: QuestionDetail = {
+  ...questionDetail,
+  id: 77,
+  questionText: spotCheckResponse.question!.questionText,
+  subject: '数学',
+  reviewStatus: 'MASTERED',
+  nextReviewDate: null,
+  consecutiveProficientCount: 2,
 }
 
 const masteredAction: ReviewActionResponse = {
@@ -131,7 +170,10 @@ describe('DailyReviewView', () => {
       (id) => `/api/questions/${id}/image`,
     )
     mockedGetNextDue.mockReset()
+    mockedGetSpotCheck.mockReset()
+    mockedGetSpotCheck.mockResolvedValue(emptySpotCheckResponse)
     mockedSubmitEvaluation.mockReset()
+    mockedSubmitSpotCheck.mockReset()
     mockedGetTree.mockResolvedValue([])
   })
 
@@ -149,6 +191,89 @@ describe('DailyReviewView', () => {
     expect(wrapper.get('[data-testid="due-count"]').text()).toContain('3 道')
     expect(wrapper.text()).not.toContain(questionDetail.correctAnswer)
     expect(mockedGetQuestion).not.toHaveBeenCalled()
+    expect(mockedGetSpotCheck).not.toHaveBeenCalled()
+  })
+
+  it('loads one mastered spot check only after the due queue is empty', async () => {
+    mockedGetNextDue.mockResolvedValue(emptyResponse)
+    mockedGetSpotCheck.mockResolvedValue(spotCheckResponse)
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(mockedGetNextDue).toHaveBeenCalledWith(undefined)
+    expect(mockedGetSpotCheck).toHaveBeenCalledWith(undefined)
+    expect(wrapper.get('[data-testid="spot-check-notice"]').text()).toContain(
+      '今日已掌握题随机抽查',
+    )
+    expect(wrapper.get('[data-testid="spot-check-count"]').text()).toContain(
+      '4 道',
+    )
+    expect(wrapper.text()).toContain('计算')
+    expect(wrapper.get('[data-testid="review-question-text"]').find('.katex').exists()).toBe(true)
+    expect(mockedGetQuestion).not.toHaveBeenCalled()
+  })
+
+  it('submits the spot-check evaluation through the dedicated endpoint', async () => {
+    mockedGetNextDue.mockResolvedValue(emptyResponse)
+    mockedGetSpotCheck.mockResolvedValue(spotCheckResponse)
+    mockedGetQuestion.mockResolvedValue(spotCheckDetail)
+    mockedSubmitSpotCheck.mockResolvedValue({
+      ...masteredAction,
+      questionId: 77,
+      eventType: 'SPOT_CHECK',
+      reviewStatus: 'MASTERED',
+      nextReviewDate: null,
+      consecutiveProficientCount: 2,
+    })
+    const wrapper = mountView()
+    await flushPromises()
+    await revealAnswer(wrapper)
+
+    await wrapper.get('[data-testid="rating-PROFICIENT"]').trigger('click')
+    await flushPromises()
+
+    expect(mockedSubmitSpotCheck).toHaveBeenCalledWith(
+      77,
+      'PROFICIENT',
+      undefined,
+    )
+    expect(mockedSubmitEvaluation).not.toHaveBeenCalled()
+    expect(wrapper.get('[data-testid="review-result"]').text()).toContain(
+      '抽查通过，继续保持已掌握',
+    )
+    expect(wrapper.get('[data-testid="next-question"]').text()).toContain(
+      '完成今日抽查',
+    )
+  })
+
+  it('shows a completed state instead of selecting a second spot check', async () => {
+    mockedGetNextDue.mockResolvedValue(emptyResponse)
+    mockedGetSpotCheck.mockResolvedValue({
+      ...emptySpotCheckResponse,
+      completedToday: true,
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="empty-queue"]').text()).toContain(
+      '今日已完成已掌握题抽查',
+    )
+    expect(wrapper.find('[data-testid="spot-check-notice"]').exists()).toBe(false)
+  })
+
+  it('rejects an inconsistent spot-check response', async () => {
+    mockedGetNextDue.mockResolvedValue(emptyResponse)
+    mockedGetSpotCheck.mockResolvedValue({
+      ...emptySpotCheckResponse,
+      eligibleCount: 1,
+      question: null,
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="queue-error"]').text()).toContain(
+      '已掌握题抽查数据不一致',
+    )
   })
 
   it('shows the due question image before requesting the answer', async () => {

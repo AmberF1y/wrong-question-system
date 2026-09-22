@@ -1921,3 +1921,27 @@ questions/83/d9ef584d-a6b9-4524-b4eb-54183351f57e.gif
 
 F-008 仍保持“一题最多一图”。只有出现真实多图需求时才考虑新增
 `question_image` 表；不得通过在 `image_path` 中拼接多个路径绕过当前模型。
+
+---
+
+# 35. F-010 已掌握题抽查约束
+
+F-010 不新增业务表，继续以 `question_review_state` 保存当前状态、以
+`review_record` 保存不可变事件历史。
+
+`review_record.event_type` 新增 `SPOT_CHECK`：
+
+- `rating` 必填；
+- `scheduled_review_date` 必须为空，因为抽查不是由到期日期触发；
+- 结果可以是 `MASTERED`，也可以按评价回到 `ACTIVE`；
+- `business_date` 用于每日上限和冷却期判断。
+
+V3 增加生成列 `spot_check_business_date`：仅当事件类型为 `SPOT_CHECK` 时等于
+`business_date`，其他事件为 `NULL`。唯一索引
+`uk_review_record_spot_check_date` 利用 MySQL 允许多个 `NULL` 的规则，实现：
+
+> 每个业务日最多一条已掌握题抽查历史。
+
+索引 `idx_review_record_event_date_question` 支持按事件类型、业务日期和题目筛选
+当天完成状态及 30 天冷却候选。抽查状态更新与历史插入处于同一事务；唯一
+约束或乐观锁冲突会整体回滚，不留下部分状态。

@@ -695,3 +695,58 @@ POST /api/questions
 修改时，文字与知识点仍使用 `PUT /api/questions/{id}`，图片上传/替换和移除
 分别使用独立图片接口。只修改文字不会触碰图片；只修改图片时不重复提交未
 变化的文字请求。
+
+---
+
+## 29. F-010 已掌握题随机抽查
+
+### GET `/api/reviews/mastered/spot-check`
+
+可选查询参数 `subject`。当前范围仍有到期题时返回 `409`；否则返回今日完成
+状态、符合 30 天冷却规则的候选数量和一道稳定随机候选题。
+
+```json
+{
+  "completedToday": false,
+  "eligibleCount": 12,
+  "cooldownDays": 30,
+  "question": {
+    "id": 42,
+    "questionText": "计算 $\\int_0^1 x\\,dx$",
+    "imagePath": null,
+    "subject": "数学"
+  }
+}
+```
+
+当今日已完成或没有候选题时，`question` 为 `null`。响应不包含错误答案、正确
+答案、解析和错误原因；查看答案仍调用 `GET /api/questions/{id}`。
+
+### POST `/api/reviews/{questionId}/spot-check-evaluations`
+
+可选查询参数 `subject` 必须与候选题科目一致。请求体复用四级评价：
+
+```json
+{
+  "rating": "PROFICIENT"
+}
+```
+
+成功响应复用 `ReviewActionResponse`，其中 `eventType` 为 `SPOT_CHECK`。评价结果：
+
+| rating | 结果 |
+| --- | --- |
+| `NOT_KNOWN` | 转为 `ACTIVE`，1 天后复习 |
+| `FUZZY` | 转为 `ACTIVE`，3 天后复习 |
+| `BASICALLY_MASTERED` | 转为 `ACTIVE`，7 天后复习 |
+| `PROFICIENT` | 保持 `MASTERED` |
+
+新增错误码：
+
+| 场景 | HTTP 状态 | code |
+| --- | ---: | --- |
+| 当前范围仍有到期题 | 409 | `SPOT_CHECK_DUE_REVIEW_REMAINING` |
+| 今日已完成抽查 | 409 | `SPOT_CHECK_ALREADY_COMPLETED` |
+| 题目不是已掌握状态 | 409 | `SPOT_CHECK_NOT_MASTERED` |
+| 题目与科目范围不符 | 409 | `SPOT_CHECK_SUBJECT_MISMATCH` |
+| 题目仍在 30 天冷却期 | 409 | `SPOT_CHECK_COOLDOWN` |

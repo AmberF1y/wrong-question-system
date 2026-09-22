@@ -270,6 +270,18 @@ public class GlobalExceptionHandler {
             DataIntegrityViolationException exception,
             HttpServletRequest request
     ) {
+        if (containsConstraint(
+                exception,
+                "uk_review_record_spot_check_date"
+        )) {
+            return buildResponse(
+                    HttpStatus.CONFLICT,
+                    "SPOT_CHECK_ALREADY_COMPLETED",
+                    "今日已完成已掌握题抽查",
+                    request.getRequestURI(),
+                    null
+            );
+        }
         return buildResponse(
                 HttpStatus.CONFLICT,
                 "DATA_INTEGRITY_CONFLICT",
@@ -277,6 +289,23 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null
         );
+    }
+
+    private boolean containsConstraint(
+            Throwable exception,
+            String constraintName
+    ) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase().contains(
+                    constraintName.toLowerCase()
+            )) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private ResponseEntity<ApiErrorResponse> buildResponse(

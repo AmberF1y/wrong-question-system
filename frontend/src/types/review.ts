@@ -6,7 +6,7 @@ export type ReviewRating =
   | 'BASICALLY_MASTERED'
   | 'PROFICIENT'
 
-export type ReviewEventType = 'EVALUATION' | 'REACTIVATION'
+export type ReviewEventType = 'EVALUATION' | 'REACTIVATION' | 'SPOT_CHECK'
 
 export interface DueQuestion {
   id: number
@@ -19,6 +19,20 @@ export interface DueQuestion {
 export interface DueReviewResponse {
   dueCount: number
   question: DueQuestion | null
+}
+
+export interface SpotCheckQuestion {
+  id: number
+  questionText: string
+  imagePath: string | null
+  subject: string
+}
+
+export interface MasteredSpotCheckResponse {
+  completedToday: boolean
+  eligibleCount: number
+  cooldownDays: number
+  question: SpotCheckQuestion | null
 }
 
 export interface SubmitReviewEvaluationRequest {

@@ -18,7 +18,11 @@
           <div>
             <dt>下次复习</dt>
             <dd>
-              {{ reviewStatus === 'MASTERED' ? '已退出常规复习队列' : formatDate(nextReviewDate) }}
+              {{ reviewStatus === 'MASTERED'
+                ? mode === 'SPOT_CHECK'
+                  ? '抽查通过，继续保持已掌握'
+                  : '已退出常规复习队列'
+                : formatDate(nextReviewDate) }}
             </dd>
           </div>
           <div>
@@ -28,7 +32,7 @@
         </dl>
 
         <el-button type="primary" data-testid="next-question" @click="emit('next')">
-          下一题
+          {{ mode === 'SPOT_CHECK' ? '完成今日抽查' : '下一题' }}
         </el-button>
       </template>
     </el-result>
@@ -41,13 +45,16 @@ import type { ReviewRating, ReviewStatus } from '../types/review'
 import { formatDate } from '../utils/date-time'
 import ReviewStatusTag from './ReviewStatusTag.vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   rating: ReviewRating | null
+  mode?: 'DUE' | 'SPOT_CHECK'
   reviewStatus: ReviewStatus
   nextReviewDate: string | null
   consecutiveProficientCount: number
   synchronized: boolean
-}>()
+}>(), {
+  mode: 'DUE',
+})
 
 const emit = defineEmits<{
   next: []

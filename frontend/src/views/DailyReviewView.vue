@@ -2,7 +2,7 @@
   <div>
     <AppPageHeader
       title="每日复习"
-      description="先在纸上重新作答，再查看答案并按真实掌握情况评价。"
+      description="先完成到期复习，再抽查一道已掌握题，按真实掌握情况评价。"
     />
 
     <el-card class="page-card filter-card" shadow="never">
@@ -109,9 +109,22 @@
     </el-card>
 
     <div v-else-if="currentQuestion" class="review-flow">
+      <el-alert
+        v-if="reviewMode === 'SPOT_CHECK'"
+        title="今日已掌握题随机抽查"
+        type="info"
+        show-icon
+        :closable="false"
+        class="flow-alert"
+        data-testid="spot-check-notice"
+      >
+        熟练表示继续保持已掌握；不会、模糊或基本掌握会分别在 1、3 或 7 天后重新进入常规复习。
+      </el-alert>
+
       <ReviewQuestionCard
         :question="currentQuestion"
-        :due-count="dueReview?.dueCount ?? 0"
+        :due-count="reviewMode === 'SPOT_CHECK' ? (spotCheckReview?.eligibleCount ?? 0) : (dueReview?.dueCount ?? 0)"
+        :mode="reviewMode"
         :loading-answer="phase === 'LOADING_ANSWER'"
         :answer-revealed="Boolean(questionDetail)"
         :image-url="currentQuestionImageUrl"
@@ -181,6 +194,7 @@
       <ReviewResultCard
         v-if="phase === 'RESULT' && resultSummary"
         :rating="resultSummary.rating"
+        :mode="reviewMode"
         :review-status="resultSummary.reviewStatus"
         :next-review-date="resultSummary.nextReviewDate"
         :consecutive-proficient-count="resultSummary.consecutiveProficientCount"
@@ -194,7 +208,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { getQuestion, getQuestionImageUrl } from '../api/questions'
-import { getNextDueReview, submitReviewEvaluation } from '../api/reviews'
+import {
+  getNextDueReview,
+  getTodayMasteredSpotCheck,
+  submitMasteredSpotCheckEvaluation,
+  submitReviewEvaluation,
+} from '../api/reviews'
 import AppEmptyState from '../components/AppEmptyState.vue'
 import AppPageHeader from '../components/AppPageHeader.vue'
 import ReviewAnswerPanel from '../components/ReviewAnswerPanel.vue'
@@ -205,6 +224,7 @@ import { useKnowledgePointStore } from '../stores/knowledge-points'
 import type { QuestionDetail } from '../types/question'
 import type {
   DueReviewResponse,
+  MasteredSpotCheckResponse,
   ReviewActionResponse,
   ReviewRating,
   ReviewStatus,
@@ -244,8 +264,10 @@ interface ReviewResultSummary {
 
 const knowledgeStore = useKnowledgePointStore()
 const selectedSubject = ref('')
+const reviewMode = ref<'DUE' | 'SPOT_CHECK'>('DUE')
 const phase = ref<ReviewPagePhase>('LOADING_QUEUE')
 const dueReview = ref<DueReviewResponse>()
+const spotCheckReview = ref<MasteredSpotCheckResponse>()
 const questionDetail = ref<QuestionDetail>()
 const resultSummary = ref<ReviewResultSummary>()
 const preSubmissionSnapshot = ref<ReviewProgressSnapshot>()
@@ -261,16 +283,22 @@ let queueRequestSequence = 0
 let detailRequestSequence = 0
 let evaluationInFlight = false
 
-const currentQuestion = computed(() => dueReview.value?.question ?? null)
+const currentQuestion = computed(() =>
+  reviewMode.value === 'SPOT_CHECK'
+    ? spotCheckReview.value?.question ?? null
+    : dueReview.value?.question ?? null,
+)
 const currentQuestionImageUrl = computed(() => {
   const question = currentQuestion.value
   return question?.imagePath ? getQuestionImageUrl(question.id) : ''
 })
-const emptyDescription = computed(() =>
-  selectedSubject.value
-    ? `“${selectedSubject.value}”今天没有待复习错题`
-    : '今天没有待复习错题',
-)
+const emptyDescription = computed(() => {
+  const scope = selectedSubject.value ? `“${selectedSubject.value}”` : ''
+  if (spotCheckReview.value?.completedToday) {
+    return `${scope}今天没有待复习错题，且今日已完成已掌握题抽查`
+  }
+  return `${scope}今天没有待复习错题，也没有可抽查的已掌握题`
+})
 
 function readableError(error: unknown): string {
   const normalized = normalizeApiError(error)
@@ -300,11 +328,26 @@ function isConsistentQueueResponse(response: DueReviewResponse): boolean {
   )
 }
 
+function isConsistentSpotCheckResponse(
+  response: MasteredSpotCheckResponse,
+): boolean {
+  if (!Number.isInteger(response.eligibleCount) || response.eligibleCount < 0) {
+    return false
+  }
+  return response.cooldownDays > 0 && (
+    (response.completedToday && response.eligibleCount === 0 && response.question === null) ||
+    (!response.completedToday && response.eligibleCount === 0 && response.question === null) ||
+    (!response.completedToday && response.eligibleCount > 0 && response.question !== null)
+  )
+}
+
 async function loadQueue(notice = ''): Promise<void> {
   const requestSequence = ++queueRequestSequence
   detailRequestSequence += 1
   phase.value = 'LOADING_QUEUE'
+  reviewMode.value = 'DUE'
   dueReview.value = undefined
+  spotCheckReview.value = undefined
   queueError.value = ''
   queueNotice.value = notice
   resetQuestionFlow()
@@ -323,7 +366,22 @@ async function loadQueue(notice = ''): Promise<void> {
     }
 
     dueReview.value = response
-    phase.value = response.question ? 'QUESTION' : 'EMPTY'
+    if (response.question) {
+      phase.value = 'QUESTION'
+      return
+    }
+
+    const spotCheckResponse = await getTodayMasteredSpotCheck(requestedSubject)
+    if (requestSequence !== queueRequestSequence) {
+      return
+    }
+    if (!isConsistentSpotCheckResponse(spotCheckResponse)) {
+      throw new Error('服务器返回的已掌握题抽查数据不一致，请重新加载')
+    }
+
+    spotCheckReview.value = spotCheckResponse
+    reviewMode.value = 'SPOT_CHECK'
+    phase.value = spotCheckResponse.question ? 'QUESTION' : 'EMPTY'
   } catch (error) {
     if (requestSequence !== queueRequestSequence) {
       return
@@ -450,7 +508,13 @@ async function submitRating(rating: ReviewRating): Promise<void> {
   phase.value = 'SUBMITTING'
 
   try {
-    const response = await submitReviewEvaluation(question.id, rating)
+    const response = reviewMode.value === 'SPOT_CHECK'
+      ? await submitMasteredSpotCheckEvaluation(
+          question.id,
+          rating,
+          selectedSubject.value || undefined,
+        )
+      : await submitReviewEvaluation(question.id, rating)
 
     if (response.questionId !== question.id) {
       throw new Error('服务器返回的评价结果与当前题目不一致')
