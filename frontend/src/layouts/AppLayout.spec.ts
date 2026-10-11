@@ -53,6 +53,8 @@ describe('AppLayout', () => {
       '/reviews',
       '/questions',
       '/knowledge-points',
+      '/ai/intake',
+      '/ai/tasks',
     ])
     expect(wrapper.text()).toContain('每日复习')
   })
@@ -60,6 +62,8 @@ describe('AppLayout', () => {
   it.each([
     ['/questions/42', '/questions'],
     ['/knowledge-points', '/knowledge-points'],
+    ['/ai/intake', '/ai/intake'],
+    ['/ai/tasks/123', '/ai/tasks'],
   ])('keeps %s mapped to the correct navigation item', async (path, expectedMenu) => {
     const router = await createTestRouter(path)
     const wrapper = mount(AppLayout, {

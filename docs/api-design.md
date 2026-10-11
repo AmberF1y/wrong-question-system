@@ -2,13 +2,13 @@
 
 ## 1. 文档状态
 
-- 当前版本：F-008 已完成并通过 Pull Request #8 合并到 `main`
+- 当前版本：F-011 / F-012 功能分支；F-001～F-010 已完成
 - 基础路径：`/api`
 - 数据格式：JSON；图片读取接口返回原始二进制
-- 当前范围：健康检查、知识点管理、错题管理、固定规则滚动复习与题目图片
+- 当前范围：健康检查、知识点管理、错题管理、固定规则滚动复习、题目图片、AI 图片任务和调用管理
 
-本文件记录已经确认并进入实现的 API。OCR、Dashboard、自适应复习和多图片
-接口仍不在当前范围内。
+本文件记录已经确认并进入实现的 API。Dashboard、自适应复习和多图片
+接口仍不在当前范围内。AI 图片转录与辅助录入接口见第 30 节。
 
 ---
 
@@ -750,3 +750,37 @@ POST /api/questions
 | 题目不是已掌握状态 | 409 | `SPOT_CHECK_NOT_MASTERED` |
 | 题目与科目范围不符 | 409 | `SPOT_CHECK_SUBJECT_MISMATCH` |
 | 题目仍在 30 天冷却期 | 409 | `SPOT_CHECK_COOLDOWN` |
+
+
+## 30. F-011 / F-012 AI 图片任务与调用
+
+所有路径以 `/api/ai` 为前缀。密钥、模型原始响应、图片物理路径和完整请求提示词不在响应中返回。所有时间为 UTC ISO-8601，业务日期按既有业务时区计算。
+
+| 方法与路径 | 请求 | 结果 |
+| --- | --- | --- |
+| GET `/configuration` | 无 | enabled、demo、model、dailyCallLimit、callsToday、concurrency、maxAttempts、maxManualRetries |
+| GET `/statistics` | 无 | 任务/调用总数、活动/失败/完成数量、已报告 token、已完成调用平均耗时、已知成本累计、configuration |
+| POST `/tasks` | multipart file；可选 rootId；必填 UUID 请求头 Idempotency-Key | 202 Task；创建排队任务或返回原幂等任务 |
+| GET `/tasks` | page=0，size=20（1～50），可选 status | TaskPage；创建时间和 ID 倒序 |
+| GET `/tasks/{id}` | UUID | Task，包含原始模型草稿 |
+| GET `/tasks/{id}/image` | UUID | 原图二进制；no-store / nosniff |
+| GET `/tasks/{id}/calls` | UUID | 该任务的 Call 数组，尝试次数倒序 |
+| GET `/calls` | page=0，size=20（1～50），可选调用 status | CallPage；创建时间和 ID 倒序 |
+| POST `/tasks/{id}/retry` | 必填 expectedRetryCount 查询参数 | 新一轮 QUEUED Task；过期请求返回 409 |
+| POST `/tasks/{id}/cancel` | 无 body | CANCELLED Task；已发出的调用可能仍计费 |
+| POST `/tasks/{id}/apply` | 与 CreateQuestionRequest 相同的已核对字段 | 200 QuestionDetailResponse，题目和原图一并保存 |
+| DELETE `/tasks/{id}` | 非活动任务 | 200 message；级联删除调用及输入图，保留已保存题目 |
+
+Task 字段：id、status、fileName、contentType、imageSize、rootId、provider、model、attemptCount、retryCount、draft、errorCode、errorMessage、createdAt、updatedAt、availableAt、questionId、appliedAt。列表的 draft 为 null，详情及操作响应提供实际草稿。provider 为 demo 或 compatible，记录本次执行模式；每次人工重试使用当前后端模型配置。status 取 QUEUED / RUNNING / RETRY_WAIT / SUCCEEDED / FAILED / CANCELLED / APPLIED。
+
+Draft 字段：questionText、correctAnswer、analysis、knowledgePointIds、warnings。未出现在图片的答案/解析留空，wrongAnswer 和 errorReason 不由模型填入。推荐知识点必须来自提交快照和当前同一科目树。返回草稿只是待核对文本，调用成功不等于转录正确。
+
+TaskPage：items、page、size、totalElements、totalPages。page 从零开始且最多 100000；status 必须为有效任务状态。
+
+Call 字段：id、attempt、provider、model、status、errorCode、inputTokens、outputTokens、durationMs、estimatedCost、createdAt、completedAt。调用状态 RUNNING / SUCCEEDED / FAILED / INTERRUPTED / CANCELLED；未知用量、耗时、成本为 null。无效/截断结果若已报告用量仍保留用量。全局 CallPage 使用相同分页字段，items 每项为 `{taskId, fileName, call}`，status 筛选调用状态。
+
+同一上传 UUID 的图片 SHA-256 与 rootId 必须相同，否则 409 AI_IDEMPOTENCY_CONFLICT。apply 仅接受 SUCCEEDED；同一任务并发/重复确认返回同一题目，已保存题目后来删除时返回 AI_APPLIED_QUESTION_DELETED 而不重建。人工编辑可调整知识点范围，最终仍执行正常错题的必填和同科目校验。
+
+retry 仅接受 FAILED/CANCELLED，要求轮数一致、未超人工上限、当日仍有执行额度，且输入图及科目候选有效。自动重试也消耗当日额度；服务重启对 RUNNING 只标中断，不自动重新调用。删除任务不会返还当日额度，统计仅包含仍保留的记录。
+
+错误继续使用统一 ApiErrorResponse：400 参数/图片/候选范围错误；404 任务不存在；409 状态或幂等/重试冲突；413 超过图片大小；429 额度或活动队列保护；503 AI 禁用或配置无效。上游失败异步记录在任务上，不让上传请求一直等待模型。详见 `docs/ai-usage.md`。

@@ -25,6 +25,19 @@ spring:
           time_zone: UTC
 
 app:
+  ai:
+    mode: disabled
+    base-url: ''
+    api-key: ''
+    model: test-vision
+    timeout-seconds: 5
+    concurrency: 2
+    max-attempts: 3
+    max-manual-retries: 2
+    daily-call-limit: 20
+    worker-enabled: false
+    max-knowledge-points: 300
+    response-format: json_object
   review:
     zone-id: ${APP_REVIEW_ZONE_ID:Asia/Shanghai}
   storage:

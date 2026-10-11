@@ -30,10 +30,10 @@ class FlywayMigrationTest {
     }
 
     @Test
-    void shouldApplyMigrationsThroughVersionThree() {
+    void shouldApplyMigrationsThroughVersionFour() {
         assertNotNull(flyway.info().current());
         assertEquals(
-                "3",
+                "4",
                 flyway.info().current().getVersion().toString()
         );
 
@@ -48,7 +48,7 @@ class FlywayMigrationTest {
                 String.class
         );
 
-        assertEquals(List.of("1", "2", "3"), successfulVersions);
+        assertEquals(List.of("1", "2", "3", "4"), successfulVersions);
     }
 
     @Test

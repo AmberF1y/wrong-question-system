@@ -25,6 +25,21 @@ spring:
           time_zone: UTC
 
 app:
+  ai:
+    mode: ${AI_MODE:disabled}
+    base-url: ${AI_BASE_URL:}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:vision-model}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:90}
+    concurrency: ${AI_CONCURRENCY:2}
+    max-attempts: ${AI_MAX_ATTEMPTS:3}
+    max-manual-retries: ${AI_MAX_MANUAL_RETRIES:2}
+    daily-call-limit: ${AI_DAILY_CALL_LIMIT:20}
+    worker-enabled: ${AI_WORKER_ENABLED:true}
+    max-knowledge-points: ${AI_MAX_KNOWLEDGE_POINTS:300}
+    response-format: ${AI_RESPONSE_FORMAT:json_object}
+    input-price-per-million: ${AI_INPUT_PRICE_PER_MILLION:}
+    output-price-per-million: ${AI_OUTPUT_PRICE_PER_MILLION:}
   review:
     zone-id: ${APP_REVIEW_ZONE_ID:Asia/Shanghai}
   storage:

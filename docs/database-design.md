@@ -7,7 +7,7 @@ v2.0 MVP
 当前阶段：
 
 ```text
-F-008 题目图片上传与管理已完成并通过 Pull Request #8 合并到 main
+F-011 / F-012 功能分支：Flyway V4 新增 AI 任务、调用与每日额度
 ```
 
 状态：
@@ -64,14 +64,14 @@ utf8mb4_unicode_ci
 后端数据访问方式：
 
 ```text
-Spring Data JPA
+Spring Data JPA；AI 任务使用 JdbcTemplate 与共享 TransactionTemplate
 ```
 
 ---
 
 # 4. 当前数据模型
 
-当前设计五张数据表：
+当前设计八张数据表，前五张为既有学习业务，后三张由 V4 新增：
 
 ```text
 question
@@ -79,6 +79,9 @@ knowledge_point
 question_knowledge_point
 question_review_state
 review_record
+ai_task
+ai_call_record
+ai_daily_usage
 ```
 
 分别负责：
@@ -1464,9 +1467,9 @@ F-005 已据此采用独立的 `question_review_state` 和 `review_record`
 
 ---
 
-# 21. 当前不设计 OCR 数据
+# 21. F-002 阶段未设计 OCR 数据（历史）
 
-当前暂时不建立：
+F-002 当时未建立：
 
 ```text
 ocr_result
@@ -1475,7 +1478,7 @@ ocr_task
 
 等数据结构。
 
-OCR 是后续增强功能。
+F-011 / F-012 已通过 V4 增加模型图片转录的任务、草稿和调用数据，见第 36 节。
 
 F-002 只通过：
 
@@ -1727,14 +1730,14 @@ knowledge_point
 
 ---
 
-## OCR 相关数据
+## 图片识别相关数据
 
 用于：
 
 ```text
-OCR原始识别结果
-OCR任务状态
-OCR修改结果
+AI初始识别草稿：V4 ai_task.draft_json
+AI任务状态：V4 ai_task.status
+人工修改结果：确认后进入 question；未确认编辑仅暂存本浏览器
 ```
 
 ---
@@ -1751,8 +1754,7 @@ OCR修改结果
 
 ```text
 复杂复习算法
-OCR任务表
-AI解析数据
+自动解题数据
 全文搜索
 复杂标签系统
 逻辑删除
@@ -1945,3 +1947,24 @@ V3 增加生成列 `spot_check_business_date`：仅当事件类型为 `SPOT_CHEC
 索引 `idx_review_record_event_date_question` 支持按事件类型、业务日期和题目筛选
 当天完成状态及 30 天冷却候选。抽查状态更新与历史插入处于同一事务；唯一
 约束或乐观锁冲突会整体回滚，不留下部分状态。
+
+
+# 36. F-011 / F-012 AI 图片任务（Flyway V4）
+
+V4 新增三张表，不回写 V1～V3；当前共八张业务表。AI 表用 JDBC 短事务管理，既有 JPA Entity 继续 Hibernate validate，Flyway 是全部结构的来源。
+
+| 表 | 主要内容与约束 |
+| --- | --- |
+| ai_task | UUID 主键；状态、生成的输入图相对键/SHA-256/MIME/大小、文件展示名、可选科目根、提交知识树快照、模式/模型、总尝试/本轮尝试/人工轮数、初始 draft_json、归一化错误、可执行/创建/修改/应用时间、已保存题目 ID |
+| ai_call_record | 自增主键；task_id 外键级联删除，(task_id,attempt) 唯一；模式/模型、状态/错误代码、可空 token/耗时/估算成本、起止时间 |
+| ai_daily_usage | 业务日期主键；非负 call_count，删除任务不清零；预占记录用于并发每日额度 |
+
+ai_task.question_id 外键引用 question(id)，ON DELETE SET NULL；任务仍保持 APPLIED，避免删除题目后重复确认重建。root_id 是提交范围的历史值，不加知识点外键；知识点变化允许保留旧任务，提交/重试与草稿推荐分别用当前树再次校验。knowledge_context 保存创建/重试时实际提供的候选快照。
+
+调度索引为 (status,available_at,created_at)，列表索引为 (created_at,id)；领取任务用 FOR UPDATE SKIP LOCKED，提交领取及额度预占后才开始 HTTP。每日额度排他锁直接取得，不使用 INSERT IGNORE 后锁升级。模型结果入库再次锁任务并核对状态与尝试序号，丢弃取消或旧轮次的迟到结果。
+
+草稿确认锁住任务，在同一事务中调用既有题目服务、初始化原复习状态、复制图片并标 APPLIED；既有文件事务补偿用于回滚/提交清理。输入图属于既有图片根的 ai-tasks 子目录，ai_task.image_path 仅存该子目录内相对键。数据库和文件系统仍有崩溃残留边界，详见 ADR-004 与 AI 使用说明。
+
+状态、尝试计数和图大小有 CHECK；调用状态也有 CHECK；成本 DECIMAL(18,8)。未知成本为 NULL，币种与两个单价由环境配置约定，不是账单。表中不保存 API Key、模型完整原始响应或个人编辑过程；人工未确认编辑暂存在浏览器，确认后写正常 question 字段。
+
+日期额度跟随业务时区，DATETIME(6) 明确按 UTC 保存/读取。现有全库与整图片目录备份覆盖新增表和输入图。当前只有单后端实例能执行全库中断恢复；多实例部署需另设计租约/心跳，不能直接并行启动。
