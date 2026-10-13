@@ -2,7 +2,7 @@
 
 开始日期：2026-10-13。基于 `codex/ai-image-intake@429fb30`，分支 `codex/rag-learning-assistant`。
 
-状态：实现与验证已完成，本次提交合并；真实模型质量验收待配置密钥。完成日期：2026-10-13。
+状态：已完成并合并到 `main`；真实模型质量验收待配置密钥。完成日期：2026-10-13。
 
 实现持久化会话/问答任务、错题文本分块与增量索引、中文关键词 BM25、可选真实 embedding 及余弦/RRF 混合检索、带来源的模型回答、范围筛选和明确追问、缺少证据时拒答、无密钥检索模式。后台有界运行，不自动重发可能计费的调用，复用每日额度并纳入 AI 调用中心。保持错题、题图、复习和抽查行为。
 
@@ -32,4 +32,8 @@ Headless Microsoft Edge 在独立数据库 `wrong_question_system_rag_acceptance
 
 ## 交付边界
 
-包含 F-011 / F-012 的父提交，本次一并提交 GitHub 合并，没有改动 `v1.0.0` 标签或正式数据库。保留 `pelican-bicycle.svg`、`scripts/launch-local.ps1`、`start-wrong-question-system.cmd` 三个原有未跟踪文件。F-013 数据库升级由新 V5 执行，旧 V1～V4 不修改。普通复习、每日抽查、题图和评价不确定响应保留既有实现。
+包含 F-011 / F-012 的父提交，已一并提交 GitHub 并合并，没有改动 `v1.0.0` 标签或正式数据库。保留 `pelican-bicycle.svg`、`scripts/launch-local.ps1`、`start-wrong-question-system.cmd` 三个原有未跟踪文件。F-013 数据库升级由新 V5 执行，旧 V1～V4 不修改。普通复习、每日抽查、题图和评价不确定响应保留既有实现。
+
+## GitHub 交付
+
+2026-10-13，[PR #12](https://github.com/AmberF1y/wrong-question-system/pull/12)《实现 AI 图片辅助录入、任务调用中心与个人错题库学习助手》已使用合并提交方式进入 `main`。功能提交为 `2cf5517`，PR 最终提交为 `3ac5b1b`，合并提交为 `cba3f8fa0a0cdaf9e3381acf86c50087f7421ac6`。GitHub 确认已合并，本地 `main` 已同步；合并文件树与 PR 最终提交完全一致。合并后仅补充中文交付文档，没有新增业务变更或重复执行已通过的测试。
