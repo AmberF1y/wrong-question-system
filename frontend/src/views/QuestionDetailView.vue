@@ -3,6 +3,7 @@
     <AppPageHeader title="错题详情">
       <template #actions>
         <el-button @click="router.push('/questions')">返回列表</el-button>
+        <el-button v-if="question" @click="router.push(`/learning-assistant?questionId=${question.id}`)">询问学习助手</el-button>
         <el-button
           v-if="reactivationSucceeded && question?.reviewStatus === 'ACTIVE'"
           type="success"

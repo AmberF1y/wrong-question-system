@@ -784,3 +784,34 @@ Call 字段：id、attempt、provider、model、status、errorCode、inputTokens
 retry 仅接受 FAILED/CANCELLED，要求轮数一致、未超人工上限、当日仍有执行额度，且输入图及科目候选有效。自动重试也消耗当日额度；服务重启对 RUNNING 只标中断，不自动重新调用。删除任务不会返还当日额度，统计仅包含仍保留的记录。
 
 错误继续使用统一 ApiErrorResponse：400 参数/图片/候选范围错误；404 任务不存在；409 状态或幂等/重试冲突；413 超过图片大小；429 额度或活动队列保护；503 AI 禁用或配置无效。上游失败异步记录在任务上，不让上传请求一直等待模型。详见 `docs/ai-usage.md`。
+
+## 31. F-013 个人错题库 RAG
+
+前缀 `/api/rag`。UUID 路径与幂等请求头会进行格式校验；分页 page 从 0 起（最多 10000）、size 默认 20（1～50）。
+
+| 方法与路径 | 请求 | 响应 |
+| --- | --- | --- |
+| GET `/configuration` | 无 | generationEnabled、demo、model、embeddingEnabled、embeddingModel、topK、callsToday、dailyCallLimit、maxManualRetries |
+| POST `/sessions` | UUID Idempotency-Key | 200 Session，重复返回同一会话 |
+| GET `/sessions` | page、size | SessionPage：items / page / size / totalElements / totalPages |
+| DELETE `/sessions/{id}` | 无 | 200 message；请求及调用均结束后可删除 |
+| POST `/sessions/{id}/requests` | UUID Idempotency-Key；JSON Ask | 202 Request；同会话最多一个活动请求 |
+| GET `/sessions/{id}/requests` | page、size | RequestPage，创建时间与 ID 倒序 |
+| GET `/requests/{id}` | 无 | Request，含答案 / 来源 / 变更标记 |
+| GET `/requests/{id}/calls` | 无 | Call 数组，attempt 倒序 |
+| POST `/requests/{id}/cancel` | 无 | Request；仅 QUEUED / RUNNING |
+| POST `/requests/{id}/retry` | 必填 expectedRetryCount | Request；仅 FAILED，人工上限以内，无活动调用；旧轮次请求返回当前结果 |
+| GET `/index` | 可选 rootId | IndexStatus：题目数、已索引 / 待更新题目数、片段 / 向量片段数、向量开关 / 模型、资源上限 |
+| POST `/index` | UUID Idempotency-Key；JSON `{rootId?:number}` | 202 INDEX Request；有限批次更新，可重复补齐 |
+
+Ask：`{question:string, rootId?:number, reviewStatus?:'ACTIVE'|'MASTERED', focusQuestionId?:number, followUp:boolean}`。问题 1～2000 字，focus 必须是范围内的现存题目。followUp 仅关联相同科目与掌握范围中上一条成功请求的问题；不会传旧回答作为依据。
+
+Session：id、title、createdAt、updatedAt。Request：id、sessionId（INDEX 为空）、kind、question、rootId、reviewStatus、focusQuestionId、followUp、status、phase、retryCount、answer、answerType、citations、sources、warnings、retrievalMethod、errorCode、errorMessage、createdAt、updatedAt、completedAt。status 为 QUEUED / RUNNING / SUCCEEDED / FAILED / CANCELLED。answerType 为 GENERATED / RETRIEVAL_ONLY / NO_EVIDENCE / INDEX。phase 为 QUEUED / INDEXING / EMBEDDING / RETRIEVING / GENERATING / DONE。
+
+Source：reference（S1～S8）、questionId、chunkNumber（从零起）、questionPreview、subject、knowledgePoints、excerpt、score（排名融合分值，不是概率）、method（KEYWORD / SEMANTIC / HYBRID / FOCUS）、documentHash、updatedAt、available、changed。原题删除时 available=false；原文 / 科目 / 知识点名称改变时 changed=true。片段原文按回答时的快照保留。
+
+会话、请求与调用的时间为 UTC ISO-8601；Source.updatedAt 读取原题 updated_time 的数据库原始 DATETIME 值（无 Z），不将本地时间误标为 UTC。新索引更新时间在库内按 UTC 保存。来源变化依据内容哈希，不依赖时间精度或数据库时区。
+
+`/api/ai/calls` 的 CallEntry 扩展为 `{taskId,fileName,call,kind,targetPath,purpose}`：IMAGE 或 RAG；targetPath 指向实际页面，purpose 为 RECOGNITION / EMBEDDING / GENERATION。两类账本的自增 call.id 只在各自表内唯一；全局列表以 createdAt、kind、id 排序，不能把 call.id 当作全局业务 ID。`/api/ai/statistics` 的调用汇总涵盖三种用途，taskCount 等任务数字仍指图片任务。每日额度由两者共享。
+
+新增错误包括 RAG_INVALID_QUESTION / SUBJECT / STATUS、RAG_FOCUS_NOT_FOUND（400），会话或请求不存在（404），RAG_SESSION_BUSY / INDEX_BUSY / IDEMPOTENCY_CONFLICT / RETRY_NOT_ALLOWED / SOURCE_CHANGED（409），CORPUS_LIMIT / CHUNK_LIMIT（413），QUEUE_FULL / AI_DAILY_LIMIT（429）。处理期间错误记录在异步 Request 中，轮询通常返回 HTTP 200 与 status=FAILED。RAG_INVALID_OUTPUT 表示模型格式或引用未通过核验。取消和重启恢复不自动重发 HTTP；详情见 `docs/rag-usage.md`。

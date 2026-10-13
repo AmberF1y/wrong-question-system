@@ -53,7 +53,13 @@ public final class AiDtos {
             Instant createdAt,
             Instant completedAt) {}
 
-    public record CallEntry(String taskId, String fileName, Call call) {}
+    public record CallEntry(
+            String taskId,
+            String fileName,
+            Call call,
+            String kind,
+            String targetPath,
+            String purpose) {}
 
     public record CallPage(
             List<CallEntry> items, int page, int size, long totalElements, long totalPages) {}

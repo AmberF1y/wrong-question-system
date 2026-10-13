@@ -1951,7 +1951,7 @@ V3 增加生成列 `spot_check_business_date`：仅当事件类型为 `SPOT_CHEC
 
 # 36. F-011 / F-012 AI 图片任务（Flyway V4）
 
-V4 新增三张表，不回写 V1～V3；当前共八张业务表。AI 表用 JDBC 短事务管理，既有 JPA Entity 继续 Hibernate validate，Flyway 是全部结构的来源。
+V4 新增三张表，不回写 V1～V3；截至 V4 共八张业务表。AI 表用 JDBC 短事务管理，既有 JPA Entity 继续 Hibernate validate，Flyway 是全部结构的来源。
 
 | 表 | 主要内容与约束 |
 | --- | --- |
@@ -1968,3 +1968,22 @@ ai_task.question_id 外键引用 question(id)，ON DELETE SET NULL；任务仍�
 状态、尝试计数和图大小有 CHECK；调用状态也有 CHECK；成本 DECIMAL(18,8)。未知成本为 NULL，币种与两个单价由环境配置约定，不是账单。表中不保存 API Key、模型完整原始响应或个人编辑过程；人工未确认编辑暂存在浏览器，确认后写正常 question 字段。
 
 日期额度跟随业务时区，DATETIME(6) 明确按 UTC 保存/读取。现有全库与整图片目录备份覆盖新增表和输入图。当前只有单后端实例能执行全库中断恢复；多实例部署需另设计租约/心跳，不能直接并行启动。
+
+# 37. F-013 个人错题库 RAG（Flyway V5）
+
+V5 新增四张表，当前共十二张业务表；V1～V4 保持不变。
+
+| 表 | 内容与约束 |
+| --- | --- |
+| rag_session | UUID 主键、会话标题、UTC 创建 / 修改时间；按更新时间分页 |
+| rag_request | UUID 主键；可空 session_id 外键级联删除；CHAT / INDEX、原始问题与范围、追问标记、状态 / 阶段 / 人工轮次、来源 / 引用 / 提示 JSON、答案类型、错误和完成时间；队列 / 会话分页索引 |
+| rag_chunk | 自增主键；question_id 外键 ON DELETE CASCADE；(question_id,chunk_number) 唯一；片段、内容 / 原题哈希、可空 JSON 浮点向量 / 服务模型指纹、UTC 更新时间 |
+| rag_call_record | 自增主键；request_id 外键级联删除；(request_id,attempt) 唯一；人工轮次、EMBEDDING / GENERATION、服务模式 / 模型、调用状态、可空 token / 成本 / 耗时 / 起止时间 |
+
+请求的 root_id / focus_question_id 是历史值，不使用题目或知识点外键，以保留已删原题的会话证据；使用前验证当前范围。sources_json 保存当时原文和哈希，历史查询再检查可用性与变化，删除原题只清索引，不清会话快照。
+
+向量以 JSON 浮点数组持久化，当前未使用 MySQL 向量类型或向量数据库。候选只取当前科目 / 掌握范围内、文档哈希匹配的片段；旧服务模型指纹的向量不参与扫描。索引文本变化时重建该题片段，使旧向量失效。重复刷新未变片段不会再次计费生成向量。
+
+ai_daily_usage 同时管理图片识别、片段 / 问题向量和学习回答的每日额度。预占与调用账本创建在同一短事务，HTTP 发送在提交后。RAG 不自动付费重试；结果提交核对请求状态和人工轮次，取消后的迟到响应只更新调用账本。调用日志不保存密钥、完整 HTTP 提示词或模型原始响应。
+
+CHECK 约束覆盖请求类型 / 状态 / 非负轮次、片段非负序号、调用用途 / 状态。DATETIME(6) 使用 UTC，额度业务日期使用 Asia/Shanghai。备份会包含会话与错题资料快照；用户删除对话时级联删除请求和 RAG 调用，保留索引、原题与已用额度。单实例恢复边界沿用 AI 任务。

@@ -25,6 +25,19 @@ spring:
           time_zone: UTC
 
 app:
+  rag:
+    model: test-rag
+    embedding-enabled: false
+    embedding-model: test-embedding
+    concurrency: 1
+    max-questions: 5000
+    max-chunks: 10000
+    chunk-size: 900
+    chunk-overlap: 100
+    top-k: 6
+    embedding-batch-size: 16
+    embedding-batches-per-request: 3
+    minimum-similarity: 0.45
   ai:
     mode: disabled
     base-url: ''

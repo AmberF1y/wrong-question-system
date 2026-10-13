@@ -9,6 +9,12 @@ const router = createRouter({
       component: AppLayout,
       children: [
         {
+          path: 'learning-assistant',
+          name: 'learning-assistant',
+          component: () => import('../views/LearningAssistantView.vue'),
+          meta: { title: '错题库学习助手' },
+        },
+        {
           path: 'ai/intake',
           name: 'ai-intake',
           component: () => import('../views/AiIntakeView.vue'),

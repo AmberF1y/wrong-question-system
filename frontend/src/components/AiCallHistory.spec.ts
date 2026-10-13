@@ -27,6 +27,12 @@ describe('global AI call history', () => {
     await wrapper.setProps({ refreshKey: 2 }); await flushPromises()
     expect(wrapper.text()).toContain('原图.png'); expect(wrapper.find('.el-alert').exists()).toBe(true); wrapper.unmount()
   })
+  it('labels RAG calls and opens the referenced learning request', async () => {
+    vi.mocked(getAllAiCalls).mockResolvedValue({ ...result, items: [{ ...result.items[0]!, fileName: '解释链表反转', kind: 'RAG', purpose: 'GENERATION', targetPath: '/learning-assistant?request=rag-1' }] })
+    const wrapper = mountHistory(); await flushPromises(); expect(wrapper.text()).toContain('学习问答')
+    await wrapper.findAll('button').find(button => button.text() === '解释链表反转')!.trigger('click')
+    expect(mocks.push).toHaveBeenCalledWith('/learning-assistant?request=rag-1'); wrapper.unmount()
+  })
   it('ignores an old request that finishes after the latest refresh', async () => {
     let finishOld!: (page: AiCallPage) => void
     vi.mocked(getAllAiCalls).mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve }))

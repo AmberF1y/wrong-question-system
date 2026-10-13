@@ -9,7 +9,8 @@
       <el-button :loading="loading" @click="load">刷新调用明细</el-button>
     </div>
     <el-table v-loading="loading" :data="data.items" empty-text="暂无调用记录">
-      <el-table-column label="任务" min-width="180"><template #default="{ row }"><el-button link type="primary" @click="router.push(`/ai/tasks/${row.taskId}`)">{{ row.fileName }}</el-button></template></el-table-column>
+      <el-table-column label="任务" min-width="180"><template #default="{ row }"><el-button link type="primary" @click="router.push(row.targetPath ?? `/ai/tasks/${row.taskId}`)">{{ row.fileName }}</el-button></template></el-table-column>
+      <el-table-column label="用途" width="100"><template #default="{ row }">{{ row.purpose === 'EMBEDDING' ? '向量检索' : row.purpose === 'GENERATION' ? '学习问答' : '图片识别' }}</template></el-table-column>
       <el-table-column label="模型" min-width="150"><template #default="{ row }">{{ row.call.provider === 'demo' ? '演示 · ' : '' }}{{ row.call.model }}</template></el-table-column>
       <el-table-column label="次数" width="70"><template #default="{ row }">{{ row.call.attempt }}</template></el-table-column>
       <el-table-column label="状态" width="130"><template #default="{ row }">{{ aiCallStatusLabels[row.call.status] ?? row.call.status }}</template></el-table-column>

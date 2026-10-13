@@ -25,6 +25,22 @@ spring:
           time_zone: UTC
 
 app:
+  rag:
+    model: ${RAG_MODEL:${AI_MODEL:vision-model}}
+    embedding-enabled: ${RAG_EMBEDDING_ENABLED:false}
+    embedding-model: ${RAG_EMBEDDING_MODEL:}
+    concurrency: ${RAG_CONCURRENCY:1}
+    max-questions: ${RAG_MAX_QUESTIONS:5000}
+    max-chunks: ${RAG_MAX_CHUNKS:10000}
+    chunk-size: 900
+    chunk-overlap: 100
+    top-k: ${RAG_TOP_K:6}
+    embedding-batch-size: 16
+    embedding-batches-per-request: ${RAG_EMBEDDING_BATCHES:3}
+    minimum-similarity: ${RAG_MINIMUM_SIMILARITY:0.45}
+    input-price-per-million: ${RAG_INPUT_PRICE_PER_MILLION:}
+    output-price-per-million: ${RAG_OUTPUT_PRICE_PER_MILLION:}
+    embedding-price-per-million: ${RAG_EMBEDDING_PRICE_PER_MILLION:}
   ai:
     mode: ${AI_MODE:disabled}
     base-url: ${AI_BASE_URL:}

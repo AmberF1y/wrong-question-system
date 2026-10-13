@@ -1,12 +1,12 @@
 <template>
   <div>
-    <AppPageHeader title="AI 任务与调用中心" description="查看识别进度、失败原因和调用用量；完成的草稿可随时继续核对。">
+    <AppPageHeader title="AI 任务与调用中心" description="查看识别进度，以及图片识别、向量检索和学习问答的调用用量。">
       <template #actions><el-button type="primary" @click="router.push('/ai/intake')">新建识别任务</el-button></template>
     </AppPageHeader>
     <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon class="ai-gap" />
     <el-alert v-if="stats?.configuration.demo" title="当前为演示模式。演示执行不代表真实识别效果，也不产生模型账单。" type="warning" :closable="false" class="ai-gap" />
     <div v-if="stats" class="ai-metrics ai-gap">
-      <el-card shadow="never"><span>任务总数</span><strong>{{ stats.taskCount }}</strong></el-card>
+      <el-card shadow="never"><span>图片任务总数</span><strong>{{ stats.taskCount }}</strong></el-card>
       <el-card shadow="never"><span>正在处理</span><strong>{{ stats.activeCount }}</strong></el-card>
       <el-card shadow="never"><span>草稿完成 / 已保存</span><strong>{{ stats.succeededCount }}</strong></el-card>
       <el-card shadow="never"><span>失败任务</span><strong>{{ stats.failedCount }}</strong></el-card>

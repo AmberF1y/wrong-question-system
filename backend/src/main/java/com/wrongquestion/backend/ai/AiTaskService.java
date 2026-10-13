@@ -26,6 +26,13 @@ import java.util.*;
 
 @Service
 public class AiTaskService {
+    private static final String ALL_CALLS =
+            """
+SELECT c.*,t.file_name,'IMAGE' kind,'RECOGNITION' purpose FROM ai_call_record c JOIN ai_task t ON t.id=c.task_id
+UNION ALL
+SELECT c.id,c.request_id task_id,c.attempt,c.provider,c.model,c.status,c.error_code,c.input_tokens,c.output_tokens,c.duration_ms,c.estimated_cost,c.created_at,c.completed_at,
+LEFT(r.question_text,100) file_name,'RAG' kind,c.purpose FROM rag_call_record c JOIN rag_request r ON r.id=c.request_id
+""";
     private static final Set<String> STATUSES =
             Set.of(
                     "QUEUED",
@@ -221,18 +228,25 @@ VALUES (?,'QUEUED',?,?,?,?,?,?,?,?,?,?,?,?)
         String where = status == null ? "" : " WHERE c.status=?";
         long total =
                 status == null
-                        ? count("SELECT COUNT(*) FROM ai_call_record c")
-                        : count("SELECT COUNT(*) FROM ai_call_record c" + where, status);
+                        ? count("SELECT COUNT(*) FROM (" + ALL_CALLS + ") c")
+                        : count("SELECT COUNT(*) FROM (" + ALL_CALLS + ") c" + where, status);
         String sql =
-                "SELECT c.*,t.file_name FROM ai_call_record c JOIN ai_task t ON t.id=c.task_id"
+                "SELECT c.* FROM ("
+                        + ALL_CALLS
+                        + ") c"
                         + where
-                        + " ORDER BY c.created_at DESC,c.id DESC LIMIT ? OFFSET ?";
+                        + " ORDER BY c.created_at DESC,c.kind,c.id DESC LIMIT ? OFFSET ?";
         org.springframework.jdbc.core.RowMapper<CallEntry> mapper =
                 (rs, index) ->
                         new CallEntry(
                                 rs.getString("task_id"),
                                 rs.getString("file_name"),
-                                call(rs, index));
+                                call(rs, index),
+                                rs.getString("kind"),
+                                "RAG".equals(rs.getString("kind"))
+                                        ? "/learning-assistant?request=" + rs.getString("task_id")
+                                        : "/ai/tasks/" + rs.getString("task_id"),
+                                rs.getString("purpose"));
         List<CallEntry> items =
                 status == null
                         ? db.query(sql, mapper, size, (long) page * size)
@@ -262,8 +276,10 @@ VALUES (?,'QUEUED',?,?,?,?,?,?,?,?,?,?,?,?)
                         """
 SELECT COUNT(*) calls,SUM(status IN ('FAILED','INTERRUPTED')) failures,
 SUM(input_tokens) input_tokens,SUM(output_tokens) output_tokens,
-AVG(duration_ms) duration_ms,SUM(estimated_cost) estimated_cost FROM ai_call_record
-""");
+AVG(duration_ms) duration_ms,SUM(estimated_cost) estimated_cost FROM (
+"""
+                                + ALL_CALLS
+                                + ") c");
         return new Statistics(
                 count("SELECT COUNT(*) FROM ai_task"),
                 count(

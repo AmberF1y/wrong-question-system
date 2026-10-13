@@ -43,7 +43,7 @@ export interface AiStatistics {
   callCount: number; failedCallCount: number; inputTokens: number | null; outputTokens: number | null
   averageDurationMs: number | null; estimatedCost: number | null; configuration: AiConfiguration
 }
-export interface AiCallEntry { taskId: string; fileName: string; call: AiCall }
+export interface AiCallEntry { taskId: string; fileName: string; call: AiCall; kind?: string; targetPath?: string; purpose?: string }
 export interface AiCallPage { items: AiCallEntry[]; page: number; size: number; totalElements: number; totalPages: number }
 export const aiCallStatusLabels: Record<string, string> = {
   RUNNING: '正在执行', SUCCEEDED: '成功', FAILED: '失败', INTERRUPTED: '处理已中断', CANCELLED: '结果已取消',
