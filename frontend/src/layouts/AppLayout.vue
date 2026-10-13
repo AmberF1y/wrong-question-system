@@ -26,6 +26,18 @@
           <el-icon><Collection /></el-icon>
           <span>知识点管理</span>
         </el-menu-item>
+        <el-menu-item index="/ai/intake">
+          <el-icon><MagicStick /></el-icon>
+          <span>AI 辅助录入</span>
+        </el-menu-item>
+        <el-menu-item index="/ai/tasks">
+          <el-icon><List /></el-icon>
+          <span>AI 任务中心</span>
+        </el-menu-item>
+        <el-menu-item index="/learning-assistant">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>错题库学习助手</span>
+        </el-menu-item>
       </el-menu>
     </aside>
 
@@ -53,7 +65,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Calendar, Collection, Notebook } from '@element-plus/icons-vue'
+import { Calendar, Collection, Notebook, MagicStick, List, ChatDotRound } from '@element-plus/icons-vue'
 import { RouterView, useRoute } from 'vue-router'
 import { getHealth } from '../api/health'
 
@@ -63,6 +75,9 @@ const route = useRoute()
 const healthState = ref<HealthState>('checking')
 
 const activeMenu = computed(() => {
+  if (route.path.startsWith('/learning-assistant')) return '/learning-assistant'
+  if (route.path.startsWith('/ai/tasks')) return '/ai/tasks'
+  if (route.path.startsWith('/ai/intake')) return '/ai/intake'
   if (route.path.startsWith('/reviews')) {
     return '/reviews'
   }

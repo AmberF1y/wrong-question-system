@@ -25,6 +25,37 @@ spring:
           time_zone: UTC
 
 app:
+  rag:
+    model: ${RAG_MODEL:${AI_MODEL:vision-model}}
+    embedding-enabled: ${RAG_EMBEDDING_ENABLED:false}
+    embedding-model: ${RAG_EMBEDDING_MODEL:}
+    concurrency: ${RAG_CONCURRENCY:1}
+    max-questions: ${RAG_MAX_QUESTIONS:5000}
+    max-chunks: ${RAG_MAX_CHUNKS:10000}
+    chunk-size: 900
+    chunk-overlap: 100
+    top-k: ${RAG_TOP_K:6}
+    embedding-batch-size: 16
+    embedding-batches-per-request: ${RAG_EMBEDDING_BATCHES:3}
+    minimum-similarity: ${RAG_MINIMUM_SIMILARITY:0.45}
+    input-price-per-million: ${RAG_INPUT_PRICE_PER_MILLION:}
+    output-price-per-million: ${RAG_OUTPUT_PRICE_PER_MILLION:}
+    embedding-price-per-million: ${RAG_EMBEDDING_PRICE_PER_MILLION:}
+  ai:
+    mode: ${AI_MODE:disabled}
+    base-url: ${AI_BASE_URL:}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:vision-model}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:90}
+    concurrency: ${AI_CONCURRENCY:2}
+    max-attempts: ${AI_MAX_ATTEMPTS:3}
+    max-manual-retries: ${AI_MAX_MANUAL_RETRIES:2}
+    daily-call-limit: ${AI_DAILY_CALL_LIMIT:20}
+    worker-enabled: ${AI_WORKER_ENABLED:true}
+    max-knowledge-points: ${AI_MAX_KNOWLEDGE_POINTS:300}
+    response-format: ${AI_RESPONSE_FORMAT:json_object}
+    input-price-per-million: ${AI_INPUT_PRICE_PER_MILLION:}
+    output-price-per-million: ${AI_OUTPUT_PRICE_PER_MILLION:}
   review:
     zone-id: ${APP_REVIEW_ZONE_ID:Asia/Shanghai}
   storage:

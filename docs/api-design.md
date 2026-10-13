@@ -2,13 +2,13 @@
 
 ## 1. 文档状态
 
-- 当前版本：F-008 已完成并通过 Pull Request #8 合并到 `main`
+- 当前版本：F-011 / F-012 功能分支；F-001～F-010 已完成
 - 基础路径：`/api`
 - 数据格式：JSON；图片读取接口返回原始二进制
-- 当前范围：健康检查、知识点管理、错题管理、固定规则滚动复习与题目图片
+- 当前范围：健康检查、知识点管理、错题管理、固定规则滚动复习、题目图片、AI 图片任务和调用管理
 
-本文件记录已经确认并进入实现的 API。OCR、Dashboard、自适应复习和多图片
-接口仍不在当前范围内。
+本文件记录已经确认并进入实现的 API。Dashboard、自适应复习和多图片
+接口仍不在当前范围内。AI 图片转录与辅助录入接口见第 30 节。
 
 ---
 
@@ -750,3 +750,68 @@ POST /api/questions
 | 题目不是已掌握状态 | 409 | `SPOT_CHECK_NOT_MASTERED` |
 | 题目与科目范围不符 | 409 | `SPOT_CHECK_SUBJECT_MISMATCH` |
 | 题目仍在 30 天冷却期 | 409 | `SPOT_CHECK_COOLDOWN` |
+
+
+## 30. F-011 / F-012 AI 图片任务与调用
+
+所有路径以 `/api/ai` 为前缀。密钥、模型原始响应、图片物理路径和完整请求提示词不在响应中返回。所有时间为 UTC ISO-8601，业务日期按既有业务时区计算。
+
+| 方法与路径 | 请求 | 结果 |
+| --- | --- | --- |
+| GET `/configuration` | 无 | enabled、demo、model、dailyCallLimit、callsToday、concurrency、maxAttempts、maxManualRetries |
+| GET `/statistics` | 无 | 任务/调用总数、活动/失败/完成数量、已报告 token、已完成调用平均耗时、已知成本累计、configuration |
+| POST `/tasks` | multipart file；可选 rootId；必填 UUID 请求头 Idempotency-Key | 202 Task；创建排队任务或返回原幂等任务 |
+| GET `/tasks` | page=0，size=20（1～50），可选 status | TaskPage；创建时间和 ID 倒序 |
+| GET `/tasks/{id}` | UUID | Task，包含原始模型草稿 |
+| GET `/tasks/{id}/image` | UUID | 原图二进制；no-store / nosniff |
+| GET `/tasks/{id}/calls` | UUID | 该任务的 Call 数组，尝试次数倒序 |
+| GET `/calls` | page=0，size=20（1～50），可选调用 status | CallPage；创建时间和 ID 倒序 |
+| POST `/tasks/{id}/retry` | 必填 expectedRetryCount 查询参数 | 新一轮 QUEUED Task；过期请求返回 409 |
+| POST `/tasks/{id}/cancel` | 无 body | CANCELLED Task；已发出的调用可能仍计费 |
+| POST `/tasks/{id}/apply` | 与 CreateQuestionRequest 相同的已核对字段 | 200 QuestionDetailResponse，题目和原图一并保存 |
+| DELETE `/tasks/{id}` | 非活动任务 | 200 message；级联删除调用及输入图，保留已保存题目 |
+
+Task 字段：id、status、fileName、contentType、imageSize、rootId、provider、model、attemptCount、retryCount、draft、errorCode、errorMessage、createdAt、updatedAt、availableAt、questionId、appliedAt。列表的 draft 为 null，详情及操作响应提供实际草稿。provider 为 demo 或 compatible，记录本次执行模式；每次人工重试使用当前后端模型配置。status 取 QUEUED / RUNNING / RETRY_WAIT / SUCCEEDED / FAILED / CANCELLED / APPLIED。
+
+Draft 字段：questionText、correctAnswer、analysis、knowledgePointIds、warnings。未出现在图片的答案/解析留空，wrongAnswer 和 errorReason 不由模型填入。推荐知识点必须来自提交快照和当前同一科目树。返回草稿只是待核对文本，调用成功不等于转录正确。
+
+TaskPage：items、page、size、totalElements、totalPages。page 从零开始且最多 100000；status 必须为有效任务状态。
+
+Call 字段：id、attempt、provider、model、status、errorCode、inputTokens、outputTokens、durationMs、estimatedCost、createdAt、completedAt。调用状态 RUNNING / SUCCEEDED / FAILED / INTERRUPTED / CANCELLED；未知用量、耗时、成本为 null。无效/截断结果若已报告用量仍保留用量。全局 CallPage 使用相同分页字段，items 每项为 `{taskId, fileName, call}`，status 筛选调用状态。
+
+同一上传 UUID 的图片 SHA-256 与 rootId 必须相同，否则 409 AI_IDEMPOTENCY_CONFLICT。apply 仅接受 SUCCEEDED；同一任务并发/重复确认返回同一题目，已保存题目后来删除时返回 AI_APPLIED_QUESTION_DELETED 而不重建。人工编辑可调整知识点范围，最终仍执行正常错题的必填和同科目校验。
+
+retry 仅接受 FAILED/CANCELLED，要求轮数一致、未超人工上限、当日仍有执行额度，且输入图及科目候选有效。自动重试也消耗当日额度；服务重启对 RUNNING 只标中断，不自动重新调用。删除任务不会返还当日额度，统计仅包含仍保留的记录。
+
+错误继续使用统一 ApiErrorResponse：400 参数/图片/候选范围错误；404 任务不存在；409 状态或幂等/重试冲突；413 超过图片大小；429 额度或活动队列保护；503 AI 禁用或配置无效。上游失败异步记录在任务上，不让上传请求一直等待模型。详见 `docs/ai-usage.md`。
+
+## 31. F-013 个人错题库 RAG
+
+前缀 `/api/rag`。UUID 路径与幂等请求头会进行格式校验；分页 page 从 0 起（最多 10000）、size 默认 20（1～50）。
+
+| 方法与路径 | 请求 | 响应 |
+| --- | --- | --- |
+| GET `/configuration` | 无 | generationEnabled、demo、model、embeddingEnabled、embeddingModel、topK、callsToday、dailyCallLimit、maxManualRetries |
+| POST `/sessions` | UUID Idempotency-Key | 200 Session，重复返回同一会话 |
+| GET `/sessions` | page、size | SessionPage：items / page / size / totalElements / totalPages |
+| DELETE `/sessions/{id}` | 无 | 200 message；请求及调用均结束后可删除 |
+| POST `/sessions/{id}/requests` | UUID Idempotency-Key；JSON Ask | 202 Request；同会话最多一个活动请求 |
+| GET `/sessions/{id}/requests` | page、size | RequestPage，创建时间与 ID 倒序 |
+| GET `/requests/{id}` | 无 | Request，含答案 / 来源 / 变更标记 |
+| GET `/requests/{id}/calls` | 无 | Call 数组，attempt 倒序 |
+| POST `/requests/{id}/cancel` | 无 | Request；仅 QUEUED / RUNNING |
+| POST `/requests/{id}/retry` | 必填 expectedRetryCount | Request；仅 FAILED，人工上限以内，无活动调用；旧轮次请求返回当前结果 |
+| GET `/index` | 可选 rootId | IndexStatus：题目数、已索引 / 待更新题目数、片段 / 向量片段数、向量开关 / 模型、资源上限 |
+| POST `/index` | UUID Idempotency-Key；JSON `{rootId?:number}` | 202 INDEX Request；有限批次更新，可重复补齐 |
+
+Ask：`{question:string, rootId?:number, reviewStatus?:'ACTIVE'|'MASTERED', focusQuestionId?:number, followUp:boolean}`。问题 1～2000 字，focus 必须是范围内的现存题目。followUp 仅关联相同科目与掌握范围中上一条成功请求的问题；不会传旧回答作为依据。
+
+Session：id、title、createdAt、updatedAt。Request：id、sessionId（INDEX 为空）、kind、question、rootId、reviewStatus、focusQuestionId、followUp、status、phase、retryCount、answer、answerType、citations、sources、warnings、retrievalMethod、errorCode、errorMessage、createdAt、updatedAt、completedAt。status 为 QUEUED / RUNNING / SUCCEEDED / FAILED / CANCELLED。answerType 为 GENERATED / RETRIEVAL_ONLY / NO_EVIDENCE / INDEX。phase 为 QUEUED / INDEXING / EMBEDDING / RETRIEVING / GENERATING / DONE。
+
+Source：reference（S1～S8）、questionId、chunkNumber（从零起）、questionPreview、subject、knowledgePoints、excerpt、score（排名融合分值，不是概率）、method（KEYWORD / SEMANTIC / HYBRID / FOCUS）、documentHash、updatedAt、available、changed。原题删除时 available=false；原文 / 科目 / 知识点名称改变时 changed=true。片段原文按回答时的快照保留。
+
+会话、请求与调用的时间为 UTC ISO-8601；Source.updatedAt 读取原题 updated_time 的数据库原始 DATETIME 值（无 Z），不将本地时间误标为 UTC。新索引更新时间在库内按 UTC 保存。来源变化依据内容哈希，不依赖时间精度或数据库时区。
+
+`/api/ai/calls` 的 CallEntry 扩展为 `{taskId,fileName,call,kind,targetPath,purpose}`：IMAGE 或 RAG；targetPath 指向实际页面，purpose 为 RECOGNITION / EMBEDDING / GENERATION。两类账本的自增 call.id 只在各自表内唯一；全局列表以 createdAt、kind、id 排序，不能把 call.id 当作全局业务 ID。`/api/ai/statistics` 的调用汇总涵盖三种用途，taskCount 等任务数字仍指图片任务。每日额度由两者共享。
+
+新增错误包括 RAG_INVALID_QUESTION / SUBJECT / STATUS、RAG_FOCUS_NOT_FOUND（400），会话或请求不存在（404），RAG_SESSION_BUSY / INDEX_BUSY / IDEMPOTENCY_CONFLICT / RETRY_NOT_ALLOWED / SOURCE_CHANGED（409），CORPUS_LIMIT / CHUNK_LIMIT（413），QUEUE_FULL / AI_DAILY_LIMIT（429）。处理期间错误记录在异步 Request 中，轮询通常返回 HTTP 200 与 status=FAILED。RAG_INVALID_OUTPUT 表示模型格式或引用未通过核验。取消和重启恢复不自动重发 HTTP；详情见 `docs/rag-usage.md`。

@@ -108,11 +108,11 @@
       </details>
     </el-card>
 
-    <el-card class="page-card form-section" shadow="never">
+    <el-card v-if="showImageField" class="page-card form-section" shadow="never">
       <template #header>
         <div class="form-section__header">
           <strong>题目图片（可选）</strong>
-          <span>图片用于保留公式、图表或原题排版，不进行 OCR</span>
+          <span>图片用于保留公式、图表或原题排版</span>
         </div>
       </template>
 
@@ -226,6 +226,7 @@ const props = withDefaults(
     submitLabel?: string
     fieldErrors?: Record<string, string>
     currentImageUrl?: string
+    showImageField?: boolean
   }>(),
   {
     initialValue: undefined,
@@ -233,12 +234,14 @@ const props = withDefaults(
     submitLabel: '保存错题',
     fieldErrors: () => ({}),
     currentImageUrl: '',
+    showImageField: true,
   },
 )
 
 const emit = defineEmits<{
   submit: [value: QuestionFormPayload, imageChange: QuestionImageChange]
   cancel: []
+  change: [value: QuestionFormPayload]
 }>()
 
 const form = reactive<QuestionFormPayload>(emptyForm())
@@ -350,6 +353,8 @@ watch(
   },
   { deep: true },
 )
+
+watch(form, () => emit('change', { ...form, knowledgePointIds: [...form.knowledgePointIds] }), { deep: true })
 </script>
 
 <style scoped>

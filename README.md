@@ -1,13 +1,15 @@
-# Wrong Question System
+# 错题整理与滚动复习系统
 
 面向个人学习场景的错题整理与固定规则滚动复习全栈应用，同时作为 Java / Vue 工程实践项目。
 
-## v1.0.0 第一版
+## 当前功能与 v1.0.0 第一版
 
 F-001～F-008 与 R-001 均已完成。R-001 已完成版本号、产品边界、本地长期
 使用、正式备份、真实使用、发布回归、Pull Request #9 合并、带注释标签
 `v1.0.0` 和中文 GitHub Release。标签准确指向最终发布内容提交 `99f31ec`，
 项目第一版已正式发布。
+
+以下功能列表反映当前代码；既有 `v1.0.0` 标签只包含 F-001～F-008 和 R-001。
 
 - 健康检查；
 - 树形知识点创建、修改、移动和严格删除；
@@ -35,8 +37,15 @@ F-001～F-008 与 R-001 均已完成。R-001 已完成版本号、产品边界�
 - 创建页和编辑页的图片选择、本地预览、替换与移除；
 - 详情页和每日复习页的响应式图片、大图查看和局部失败重试；
 - 服务端生成相对存储键，图片保存在可配置的本地文件系统目录。
-当前不包含 OCR、Dashboard、趋势统计、薄弱知识点、复习历史页面、自适应
+- AI 图片辅助录入与任务 / 调用管理；配置见 [AI 使用说明](docs/ai-usage.md)。
+- 基于个人错题文本的 RAG 学习助手：关键词 / 可选真实向量混合检索、引用原文、会话恢复、来源变更提示；配置见 [学习助手说明](docs/rag-usage.md)。
+
+当前不包含 Dashboard、趋势统计、薄弱知识点、复习历史页面、自适应
 复习算法、用户系统、对象存储、多图片和部署。
+
+当前代码已包含 F-011～F-013；既有 `v1.0.0` 标签不包含这些功能。未配置真实
+模型时，学习助手仍可检索真实错题原文，不会生成模拟回答。代码提供至 V5 的
+数据库迁移，首次启动会顺序执行尚未应用的迁移；正式使用前按本地说明备份。
 
 F-009 数学公式渲染和 F-010 已掌握题随机抽查均已完成自动化验证与浏览器
 人工验收。F-010 在普通到期队列清空后每日最多提供一道已掌握题抽查，并具备
@@ -45,6 +54,21 @@ F-009 数学公式渲染和 F-010 已掌握题随机抽查均已完成自动化�
 `v1.0.0` 的第一版完成标准是“录入 → 保存 → 调度 → 复习 → 评价 → 再调度”
 核心闭环可以在 Windows 桌面浏览器中长期自用。Dashboard、学习反馈和部署
 进入后续版本候选，不阻断第一版发布。
+
+F-011 / F-012 提供 AI 图片辅助录入和任务与调用中心：持久化识别任务、原图
+对照草稿、现有知识点推荐、人工确认保存、有限
+重试/取消、每日额度、分页调用明细、用量与成本估算，以及重启和不确定响应恢复。
+默认关闭外部调用；设置 `AI_MODE=demo` 可无密钥演示，真实模式通过环境变量
+接入支持图片的兼容模型。配置、故障处理、备份和演示见 [AI 使用说明](docs/ai-usage.md)。
+
+F-013 提供基于个人错题库的学习助手：默认使用中文关键词检索真实原文，
+配置模型后可生成带来源引用的回答，并可启用真实向量混合检索。会话和问答
+任务持久化，原题修改或删除后提示来源变化，向量与回答调用纳入统一调用中心。
+配置、演示步骤与效果验收见 [学习助手说明](docs/rag-usage.md)。
+
+当前版本已通过后端 227 个测试、前端 23 个文件共 154 个测试、类型检查、
+生产构建和独立浏览器流程验收。模型协议使用本地 HTTP 夹具验证，真实模型的
+图片识别、语义检索与回答质量仍待配置密钥及样本集后评测。
 
 ## 技术栈
 
@@ -85,6 +109,8 @@ sql/create-test-database.sql
 backend/src/main/resources/db/migration/V1__initial_schema.sql
 backend/src/main/resources/db/migration/V2__add_rolling_review.sql
 backend/src/main/resources/db/migration/V3__add_mastered_spot_check.sql
+backend/src/main/resources/db/migration/V4__add_ai_image_tasks.sql
+backend/src/main/resources/db/migration/V5__add_rag_learning_assistant.sql
 ```
 
 Hibernate 使用 `ddl-auto: validate` 校验 Entity 与迁移后的结构是否一致，不负责建表。
@@ -112,6 +138,8 @@ $env:APP_QUESTION_IMAGE_DIRECTORY = "D:\WrongQuestionData\question-images"
 
 数据库只保存 `questions/{questionId}/{uuid}.{extension}` 形式的相对路径，
 不得把图片目录或真实图片提交到 Git。
+AI 识别输入保存在同一根目录的 `ai-tasks` 子目录，确认保存后复制为独立题图；
+现有整目录备份同时包含两者。
 
 ## 本地运行
 
@@ -149,6 +177,7 @@ npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort
 
 浏览器访问 `http://127.0.0.1:5173/`。Vite 将 `/api` 请求代理到
 `http://localhost:8080`。
+验收其他端口时可通过 `VITE_API_PROXY_TARGET` 覆盖开发代理目标，日常无需设置。
 
 ## 运行测试
 
@@ -173,8 +202,9 @@ npm.cmd run test:unit -- --run
 npm.cmd run build
 ```
 
-F-008 功能分支和合并后的 `main` 最终验证结果均为后端 146 个测试通过、
-前端 16 个测试文件共 81 个测试通过，类型检查和生产构建通过。
+2026-10-13 的全量验证结果为后端 227 个测试通过、前端 23 个测试文件共
+154 个测试通过，类型检查和生产构建通过。历次验证记录见
+[项目状态](docs/project-status.md)。
 
 Windows PowerShell 因执行策略阻止 `npm.ps1` 时，使用 `npm.cmd` 即可，
 不需要修改机器级执行策略。
@@ -263,4 +293,6 @@ Flyway 会把现有 F-004 结构登记为 V1，再执行 V2。迁移成功并核
 - `docs/local-usage.md`：Windows 本地长期使用、备份和恢复；
 - `docs/releases/`：版本发布说明；
 - `docs/decisions/`：架构决策记录；
-- `docs/plans/`：Feature 计划与实施记录。
+- `docs/plans/`：功能计划与实施记录；
+- [AI 使用说明](docs/ai-usage.md)：图片辅助录入、任务与调用管理；
+- [学习助手说明](docs/rag-usage.md)：错题库检索、模型配置与来源引用。

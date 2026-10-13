@@ -3,7 +3,11 @@
     <AppPageHeader
       title="录入错题"
       description="填写题目、答案与复盘信息，并关联同一科目下的知识点。"
-    />
+    >
+      <template #actions>
+        <el-button @click="router.push('/ai/intake')">AI 图片辅助录入</el-button>
+      </template>
+    </AppPageHeader>
 
     <el-alert
       v-if="knowledgeError"

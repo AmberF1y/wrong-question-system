@@ -7,7 +7,7 @@ v2.0 MVP
 当前阶段：
 
 ```text
-F-008 题目图片上传与管理已完成并通过 Pull Request #8 合并到 main
+F-011 / F-012 功能分支：Flyway V4 新增 AI 任务、调用与每日额度
 ```
 
 状态：
@@ -64,14 +64,14 @@ utf8mb4_unicode_ci
 后端数据访问方式：
 
 ```text
-Spring Data JPA
+Spring Data JPA；AI 任务使用 JdbcTemplate 与共享 TransactionTemplate
 ```
 
 ---
 
 # 4. 当前数据模型
 
-当前设计五张数据表：
+当前设计八张数据表，前五张为既有学习业务，后三张由 V4 新增：
 
 ```text
 question
@@ -79,6 +79,9 @@ knowledge_point
 question_knowledge_point
 question_review_state
 review_record
+ai_task
+ai_call_record
+ai_daily_usage
 ```
 
 分别负责：
@@ -1464,9 +1467,9 @@ F-005 已据此采用独立的 `question_review_state` 和 `review_record`
 
 ---
 
-# 21. 当前不设计 OCR 数据
+# 21. F-002 阶段未设计 OCR 数据（历史）
 
-当前暂时不建立：
+F-002 当时未建立：
 
 ```text
 ocr_result
@@ -1475,7 +1478,7 @@ ocr_task
 
 等数据结构。
 
-OCR 是后续增强功能。
+F-011 / F-012 已通过 V4 增加模型图片转录的任务、草稿和调用数据，见第 36 节。
 
 F-002 只通过：
 
@@ -1727,14 +1730,14 @@ knowledge_point
 
 ---
 
-## OCR 相关数据
+## 图片识别相关数据
 
 用于：
 
 ```text
-OCR原始识别结果
-OCR任务状态
-OCR修改结果
+AI初始识别草稿：V4 ai_task.draft_json
+AI任务状态：V4 ai_task.status
+人工修改结果：确认后进入 question；未确认编辑仅暂存本浏览器
 ```
 
 ---
@@ -1751,8 +1754,7 @@ OCR修改结果
 
 ```text
 复杂复习算法
-OCR任务表
-AI解析数据
+自动解题数据
 全文搜索
 复杂标签系统
 逻辑删除
@@ -1945,3 +1947,43 @@ V3 增加生成列 `spot_check_business_date`：仅当事件类型为 `SPOT_CHEC
 索引 `idx_review_record_event_date_question` 支持按事件类型、业务日期和题目筛选
 当天完成状态及 30 天冷却候选。抽查状态更新与历史插入处于同一事务；唯一
 约束或乐观锁冲突会整体回滚，不留下部分状态。
+
+
+# 36. F-011 / F-012 AI 图片任务（Flyway V4）
+
+V4 新增三张表，不回写 V1～V3；截至 V4 共八张业务表。AI 表用 JDBC 短事务管理，既有 JPA Entity 继续 Hibernate validate，Flyway 是全部结构的来源。
+
+| 表 | 主要内容与约束 |
+| --- | --- |
+| ai_task | UUID 主键；状态、生成的输入图相对键/SHA-256/MIME/大小、文件展示名、可选科目根、提交知识树快照、模式/模型、总尝试/本轮尝试/人工轮数、初始 draft_json、归一化错误、可执行/创建/修改/应用时间、已保存题目 ID |
+| ai_call_record | 自增主键；task_id 外键级联删除，(task_id,attempt) 唯一；模式/模型、状态/错误代码、可空 token/耗时/估算成本、起止时间 |
+| ai_daily_usage | 业务日期主键；非负 call_count，删除任务不清零；预占记录用于并发每日额度 |
+
+ai_task.question_id 外键引用 question(id)，ON DELETE SET NULL；任务仍保持 APPLIED，避免删除题目后重复确认重建。root_id 是提交范围的历史值，不加知识点外键；知识点变化允许保留旧任务，提交/重试与草稿推荐分别用当前树再次校验。knowledge_context 保存创建/重试时实际提供的候选快照。
+
+调度索引为 (status,available_at,created_at)，列表索引为 (created_at,id)；领取任务用 FOR UPDATE SKIP LOCKED，提交领取及额度预占后才开始 HTTP。每日额度排他锁直接取得，不使用 INSERT IGNORE 后锁升级。模型结果入库再次锁任务并核对状态与尝试序号，丢弃取消或旧轮次的迟到结果。
+
+草稿确认锁住任务，在同一事务中调用既有题目服务、初始化原复习状态、复制图片并标 APPLIED；既有文件事务补偿用于回滚/提交清理。输入图属于既有图片根的 ai-tasks 子目录，ai_task.image_path 仅存该子目录内相对键。数据库和文件系统仍有崩溃残留边界，详见 ADR-004 与 AI 使用说明。
+
+状态、尝试计数和图大小有 CHECK；调用状态也有 CHECK；成本 DECIMAL(18,8)。未知成本为 NULL，币种与两个单价由环境配置约定，不是账单。表中不保存 API Key、模型完整原始响应或个人编辑过程；人工未确认编辑暂存在浏览器，确认后写正常 question 字段。
+
+日期额度跟随业务时区，DATETIME(6) 明确按 UTC 保存/读取。现有全库与整图片目录备份覆盖新增表和输入图。当前只有单后端实例能执行全库中断恢复；多实例部署需另设计租约/心跳，不能直接并行启动。
+
+# 37. F-013 个人错题库 RAG（Flyway V5）
+
+V5 新增四张表，当前共十二张业务表；V1～V4 保持不变。
+
+| 表 | 内容与约束 |
+| --- | --- |
+| rag_session | UUID 主键、会话标题、UTC 创建 / 修改时间；按更新时间分页 |
+| rag_request | UUID 主键；可空 session_id 外键级联删除；CHAT / INDEX、原始问题与范围、追问标记、状态 / 阶段 / 人工轮次、来源 / 引用 / 提示 JSON、答案类型、错误和完成时间；队列 / 会话分页索引 |
+| rag_chunk | 自增主键；question_id 外键 ON DELETE CASCADE；(question_id,chunk_number) 唯一；片段、内容 / 原题哈希、可空 JSON 浮点向量 / 服务模型指纹、UTC 更新时间 |
+| rag_call_record | 自增主键；request_id 外键级联删除；(request_id,attempt) 唯一；人工轮次、EMBEDDING / GENERATION、服务模式 / 模型、调用状态、可空 token / 成本 / 耗时 / 起止时间 |
+
+请求的 root_id / focus_question_id 是历史值，不使用题目或知识点外键，以保留已删原题的会话证据；使用前验证当前范围。sources_json 保存当时原文和哈希，历史查询再检查可用性与变化，删除原题只清索引，不清会话快照。
+
+向量以 JSON 浮点数组持久化，当前未使用 MySQL 向量类型或向量数据库。候选只取当前科目 / 掌握范围内、文档哈希匹配的片段；旧服务模型指纹的向量不参与扫描。索引文本变化时重建该题片段，使旧向量失效。重复刷新未变片段不会再次计费生成向量。
+
+ai_daily_usage 同时管理图片识别、片段 / 问题向量和学习回答的每日额度。预占与调用账本创建在同一短事务，HTTP 发送在提交后。RAG 不自动付费重试；结果提交核对请求状态和人工轮次，取消后的迟到响应只更新调用账本。调用日志不保存密钥、完整 HTTP 提示词或模型原始响应。
+
+CHECK 约束覆盖请求类型 / 状态 / 非负轮次、片段非负序号、调用用途 / 状态。DATETIME(6) 使用 UTC，额度业务日期使用 Asia/Shanghai。备份会包含会话与错题资料快照；用户删除对话时级联删除请求和 RAG 调用，保留索引、原题与已用额度。单实例恢复边界沿用 AI 任务。

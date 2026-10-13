@@ -9,6 +9,30 @@ const router = createRouter({
       component: AppLayout,
       children: [
         {
+          path: 'learning-assistant',
+          name: 'learning-assistant',
+          component: () => import('../views/LearningAssistantView.vue'),
+          meta: { title: '错题库学习助手' },
+        },
+        {
+          path: 'ai/intake',
+          name: 'ai-intake',
+          component: () => import('../views/AiIntakeView.vue'),
+          meta: { title: 'AI 图片辅助录入' },
+        },
+        {
+          path: 'ai/tasks',
+          name: 'ai-tasks',
+          component: () => import('../views/AiTaskListView.vue'),
+          meta: { title: 'AI 任务中心' },
+        },
+        {
+          path: 'ai/tasks/:id',
+          name: 'ai-task-detail',
+          component: () => import('../views/AiTaskDetailView.vue'),
+          meta: { title: '识别结果与草稿' },
+        },
+        {
           path: '',
           redirect: '/questions',
         },

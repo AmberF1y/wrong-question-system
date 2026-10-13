@@ -18,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -29,6 +31,20 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler({MissingRequestHeaderException.class, MissingServletRequestParameterException.class})
+    public ResponseEntity<ApiErrorResponse> handleMissingParameter(
+            Exception exception, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
+                "缺少必填请求参数或请求头", request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(com.wrongquestion.backend.ai.AiException.class)
+    public ResponseEntity<ApiErrorResponse> handleAi(
+            com.wrongquestion.backend.ai.AiException exception, HttpServletRequest request) {
+        return buildResponse(HttpStatus.valueOf(exception.getStatus()), exception.getCode(),
+                exception.getMessage(), request.getRequestURI(), null);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(
